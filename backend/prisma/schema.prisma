@@ -1,0 +1,231 @@
+// Synka Backend - Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  DOCTOR
+  STAFF
+}
+
+enum Language {
+  EN
+  ES
+}
+
+enum DrugType {
+  BRAND
+  BIOSIMILAR
+}
+
+enum InterchangeabilityStatus {
+  NOT_APPLICABLE    // For brand/reference products
+  BIOSIMILAR        // Approved as biosimilar only
+  INTERCHANGEABLE   // FDA-approved interchangeable (can substitute at pharmacy)
+}
+
+enum SwitchStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AppointmentType {
+  INITIAL
+  DAY_3
+  DAY_14
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  MISSED
+  RESCHEDULED
+}
+
+enum Severity {
+  MILD
+  MODERATE
+  SEVERE
+}
+
+enum SmsStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+}
+
+// Models
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Patient {
+  id            String         @id @default(uuid())
+  name          String
+  phone         String         @unique
+  dateOfBirth   DateTime
+  language      Language       @default(EN)
+  diagnosis     String?        // Primary diagnosis for biosimilar eligibility (e.g., "RHEUMATOID_ARTHRITIS")
+  allergies     String?        // Comma-separated allergy codes (e.g., "ADALIMUMAB,LATEX")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  switches      SwitchRecord[]
+  appointments  Appointment[]
+  smsLogs       SmsLog[]
+
+  @@index([phone])
+  @@index([diagnosis])
+  @@map("patients")
+}
+
+model Drug {
+  id                      String                    @id @default(uuid())
+  name                    String                    // Proprietary/brand name (e.g., "Humira", "Amjevita")
+  type                    DrugType
+  costPerMonth            Float
+  approvedForSwitch       Boolean                   @default(true)
+  therapeuticClass        String                    // e.g., "Anti-TNF", "HER2", "G-CSF"
+  manufacturer            String?
+  description             String?
+  createdAt               DateTime                  @default(now())
+
+  // FDA Purple Book Fields
+  activeIngredient        String?                   // Proper name (e.g., "adalimumab", "infliximab")
+  fdaSuffix               String?                   // FDA-assigned suffix (e.g., "-atto", "-adbm")
+  blaNumber               String?                   // Biologics License Application number
+  fdaApprovalDate         DateTime?                 // Date of FDA approval
+  interchangeability      InterchangeabilityStatus  @default(NOT_APPLICABLE)
+  referenceProductId      String?                   // For biosimilars: links to the brand reference product
+  referenceProduct        Drug?                     @relation("BiosimilarReference", fields: [referenceProductId], references: [id])
+  biosimilars             Drug[]                    @relation("BiosimilarReference")
+
+  // Clinical Information
+  indications             String?                   // Comma-separated list of approved indications
+  administrationRoute     String?                   // e.g., "subcutaneous", "intravenous"
+
+  switchesFrom            SwitchRecord[]            @relation("FromDrug")
+  switchesTo              SwitchRecord[]            @relation("ToDrug")
+
+  @@index([type, therapeuticClass])
+  @@index([activeIngredient])
+  @@map("drugs")
+}
+
+model SwitchRecord {
+  id                String        @id @default(uuid())
+  patientId         String
+  patient           Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fromDrugId        String
+  fromDrug          Drug          @relation("FromDrug", fields: [fromDrugId], references: [id])
+  toDrugId          String
+  toDrug            Drug          @relation("ToDrug", fields: [toDrugId], references: [id])
+  switchDate        DateTime
+  status            SwitchStatus  @default(PENDING)
+  eligibilityNotes  String?
+  consentObtained   Boolean       @default(false)
+  consentTimestamp  DateTime?
+  consentText       String?
+  completionDate    DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  appointments      Appointment[]
+
+  @@index([patientId])
+  @@index([status])
+  @@map("switch_records")
+}
+
+model Appointment {
+  id              String            @id @default(uuid())
+  patientId       String
+  patient         Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  switchId        String
+  switch          SwitchRecord      @relation(fields: [switchId], references: [id], onDelete: Cascade)
+  appointmentType AppointmentType
+  scheduledAt     DateTime
+  status          AppointmentStatus @default(SCHEDULED)
+  notes           String?
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+
+  followUp        FollowUp?
+  smsLogs         SmsLog[]
+
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([patientId])
+  @@map("appointments")
+}
+
+model FollowUp {
+  id                      String    @id @default(uuid())
+  appointmentId           String    @unique
+  appointment             Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  completedAt             DateTime?
+  hasSideEffects          Boolean   @default(false)
+  sideEffectSeverity      Severity?
+  sideEffectDescription   String?
+  stillTakingMedication   Boolean
+  needsEscalation         Boolean   @default(false)
+  patientSatisfaction     Int?      // 1-5 stars
+  notes                   String?
+
+  @@map("follow_ups")
+}
+
+model SmsLog {
+  id              String         @id @default(uuid())
+  patientId       String
+  patient         Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointmentId   String?
+  appointment     Appointment?   @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  phoneNumber     String
+  message         String
+  language        Language
+  sentAt          DateTime?
+  deliveryStatus  SmsStatus      @default(PENDING)
+  twilioSid       String?
+  errorMessage    String?
+  createdAt       DateTime       @default(now())
+
+  @@index([deliveryStatus])
+  @@map("sms_logs")
+}
+
+model Alert {
+  id              String    @id @default(uuid())
+  type            String    // 'SEVERE_REACTION', 'FAILED_SWITCH'
+  patientId       String
+  switchId        String?
+  followUpId      String?
+  description     String
+  severity        Severity
+  reviewed        Boolean   @default(false)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([reviewed])
+  @@index([createdAt])
+  @@map("alerts")
+}
