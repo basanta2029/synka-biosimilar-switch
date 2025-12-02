@@ -33,18 +33,29 @@ const ProfileScreen = () => {
   const handleSyncNow = async () => {
     setIsSyncingManual(true);
     try {
+      // First, re-queue any orphaned unsynced patients
+      const requeueCount = await syncService.requeueUnsyncedPatients();
+      if (requeueCount > 0) {
+        console.log(`Re-queued ${requeueCount} orphaned patients`);
+      }
+
+      // Now sync all
       const result = await syncService.syncAll();
       if (result.success > 0 || result.failed > 0) {
         Alert.alert(
           'Sync Complete',
           `Synced: ${result.success}\nFailed: ${result.failed}`
         );
+      } else if (requeueCount > 0) {
+        // If we re-queued but nothing synced, there might be an error
+        Alert.alert('Sync Issue', `Found ${requeueCount} unsynced items but sync failed. Check your connection.`);
       } else {
-        Alert.alert('Sync Complete', 'No pending items to sync');
+        Alert.alert('Sync Complete', 'All data is synced');
       }
       // Refresh queries after sync
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (error) {
+      console.error('Sync error:', error);
       Alert.alert('Sync Error', 'Failed to sync. Please try again.');
     } finally {
       setIsSyncingManual(false);

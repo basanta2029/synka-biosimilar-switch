@@ -43,8 +43,10 @@ export const usePatients = (searchQuery?: string) => {
       const response = await patientsApi.getPatients({ search: searchQuery });
 
       // Save API data to local DB (mark as synced)
-      if (response?.patients && response.patients.length > 0) {
-        await patientsDb.batchUpsertFromServer(response.patients);
+      // Use response.data as defined in PaginatedResponse type
+      if (response?.data && response.data.length > 0) {
+        // Only upsert patients that are not pending deletion locally
+        await patientsDb.batchUpsertFromServer(response.data);
         // Refetch local data to show updated patients
         queryClient.invalidateQueries({ queryKey: ['patients', 'local'] });
       }
@@ -198,19 +200,35 @@ export const useDeletePatient = () => {
 
   return useMutation({
     mutationFn: async (patientId: string) => {
-      // Try to delete from server first (if online)
-      try {
-        const netState = await NetInfo.fetch();
-        if (netState.isConnected) {
+      const netState = await NetInfo.fetch();
+
+      // First, clear any pending create/update operations for this patient
+      // to prevent conflicts in the sync queue
+      await syncService.clearPatientSyncQueue(patientId);
+
+      if (netState.isConnected) {
+        // If online, try to delete from server immediately
+        try {
           await patientsApi.deletePatient(patientId);
+          console.log(`Patient ${patientId} deleted from server`);
+        } catch (error: any) {
+          // If 404, patient doesn't exist on server (already deleted or never synced)
+          if (error?.response?.status !== 404) {
+            console.log('Server delete failed:', error);
+            // Queue for sync if it fails for reasons other than 404
+            await syncService.queuePatientSync('delete', patientId);
+          }
         }
-      } catch (error) {
-        console.log('Server delete failed, will sync later:', error);
-        // Queue for sync if server delete fails
+      } else {
+        // If offline, queue the delete for later sync
+        console.log('Offline - queuing delete for sync');
         await syncService.queuePatientSync('delete', patientId);
       }
 
-      // Always delete from local DB
+      // Track this deletion locally to prevent server data from restoring it
+      await patientsDb.trackDeletion(patientId);
+
+      // Delete from local DB
       await patientsDb.delete(patientId);
     },
     onSuccess: () => {
@@ -224,12 +242,23 @@ export const useDeletePatient = () => {
  */
 export const useSyncStatus = () => {
   const [queueCount, setQueueCount] = useState(0);
+  const [unsyncedCount, setUnsyncedCount] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     const updateStatus = async () => {
-      const count = await syncService.getQueueCount();
-      setQueueCount(count);
+      // Get sync queue count
+      const queue = await syncService.getQueueCount();
+      setQueueCount(queue);
+
+      // Also get unsynced patients count (orphaned items not in queue)
+      try {
+        const unsyncedPatients = await patientsDb.getUnsynced();
+        setUnsyncedCount(unsyncedPatients.length);
+      } catch (error) {
+        console.error('Error getting unsynced patients:', error);
+      }
+
       setIsSyncing(syncService.isSyncingNow());
     };
 
@@ -243,8 +272,12 @@ export const useSyncStatus = () => {
     await syncService.syncAll();
   };
 
+  // Total pending = items in queue + orphaned unsynced patients
+  const totalPending = Math.max(queueCount, unsyncedCount);
+
   return {
-    queueCount,
+    queueCount: totalPending, // Return total pending for display
+    unsyncedCount,
     isSyncing,
     triggerSync,
   };
