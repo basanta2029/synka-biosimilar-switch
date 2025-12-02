@@ -18,6 +18,7 @@ import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 import { syncService } from '../../services/syncService';
 import { clearAllData } from '../../database';
 import { adminApi } from '../../api/admin';
+import { useSyncStatus } from '../../hooks/usePatients';
 
 const ProfileScreen = () => {
   const { t, i18n } = useTranslation();
@@ -26,6 +27,29 @@ const ProfileScreen = () => {
   useLanguageStore(); // Subscribe to language changes for re-render
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
+  const [isSyncingManual, setIsSyncingManual] = useState(false);
+  const { queueCount, isSyncing } = useSyncStatus();
+
+  const handleSyncNow = async () => {
+    setIsSyncingManual(true);
+    try {
+      const result = await syncService.syncAll();
+      if (result.success > 0 || result.failed > 0) {
+        Alert.alert(
+          'Sync Complete',
+          `Synced: ${result.success}\nFailed: ${result.failed}`
+        );
+      } else {
+        Alert.alert('Sync Complete', 'No pending items to sync');
+      }
+      // Refresh queries after sync
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+    } catch (error) {
+      Alert.alert('Sync Error', 'Failed to sync. Please try again.');
+    } finally {
+      setIsSyncingManual(false);
+    }
+  };
 
   const handleClearLocalData = () => {
     Alert.alert(
@@ -176,9 +200,29 @@ const ProfileScreen = () => {
           <MenuItem
             icon="refresh-cw"
             label={t('profile.syncStatus')}
-            value={t('profile.active')}
-            valueColor={COLORS.success}
+            value={isSyncing ? 'Syncing...' : (queueCount > 0 ? `${queueCount} pending` : 'Synced')}
+            valueColor={queueCount > 0 ? COLORS.warning : COLORS.success}
           />
+          <View style={styles.menuDivider} />
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleSyncNow}
+            disabled={isSyncingManual || isSyncing}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconContainer, { backgroundColor: COLORS.primary + '10' }]}>
+                <Icon name="upload-cloud" size={18} color={COLORS.primary} />
+              </View>
+              <Text style={styles.menuItemText}>Sync Now</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              {isSyncingManual ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                <Icon name="chevron-right" size={18} color={COLORS.textTertiary} />
+              )}
+            </View>
+          </TouchableOpacity>
           <View style={styles.menuDivider} />
           <MenuItem
             icon="database"
