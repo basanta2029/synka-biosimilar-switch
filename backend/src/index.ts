@@ -55,6 +55,10 @@ app.use('/api/v1/drugs', drugRoutes);
 import switchRoutes from './routes/switchRoutes';
 app.use('/api/v1/switches', switchRoutes);
 
+// Import admin routes
+import adminRoutes from './routes/adminRoutes';
+app.use('/api/v1/admin', adminRoutes);
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

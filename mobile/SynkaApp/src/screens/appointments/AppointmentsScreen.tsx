@@ -11,6 +11,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { switchesApi } from '../../api/switches';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
+import { FollowUpFormModal } from '../../components/common';
 
 interface Appointment {
   id: string;
@@ -41,6 +42,8 @@ const AppointmentsScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<FilterTab>('upcoming');
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
 
   const loadAppointments = useCallback(async () => {
     try {
@@ -71,6 +74,17 @@ const AppointmentsScreen: React.FC = () => {
   const onRefresh = () => {
     setRefreshing(true);
     loadAppointments();
+  };
+
+  const handleCompletePress = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setShowFollowUpModal(true);
+  };
+
+  const handleFollowUpSuccess = () => {
+    setShowFollowUpModal(false);
+    setSelectedAppointment(null);
+    loadAppointments(); // Reload to reflect the completed status
   };
 
   const getStatusColor = (status: string) => {
@@ -170,6 +184,15 @@ const AppointmentsScreen: React.FC = () => {
           <Text style={styles.dateText}>{formatDate(item.scheduledAt)}</Text>
           <Text style={styles.timeText}>{formatTime(item.scheduledAt)}</Text>
         </View>
+        {item.status === 'SCHEDULED' && (
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={() => handleCompletePress(item)}
+          >
+            <Icon name="check-circle" size={16} color={COLORS.surface} />
+            <Text style={styles.completeButtonText}>Complete</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -227,6 +250,15 @@ const AppointmentsScreen: React.FC = () => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+      />
+      <FollowUpFormModal
+        visible={showFollowUpModal}
+        appointment={selectedAppointment}
+        onClose={() => {
+          setShowFollowUpModal(false);
+          setSelectedAppointment(null);
+        }}
+        onSuccess={handleFollowUpSuccess}
       />
     </View>
   );
@@ -412,6 +444,20 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     paddingHorizontal: SPACING.xl,
+  },
+  completeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.success,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  completeButtonText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: '600',
+    color: COLORS.surface,
   },
 });
 

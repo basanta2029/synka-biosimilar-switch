@@ -586,6 +586,44 @@ export class SwitchService {
       });
     }
 
+    // Auto-complete switch if both follow-ups are done and no failures
+    if (data.stillTakingMedication && data.sideEffectSeverity !== 'SEVERE') {
+      // Check if both Day 3 and Day 14 appointments are completed
+      const allAppointments = await prisma.appointment.findMany({
+        where: { switchId: appointment.switchId },
+        include: { followUp: true },
+      });
+
+      const day3 = allAppointments.find(a => a.appointmentType === 'DAY_3');
+      const day14 = allAppointments.find(a => a.appointmentType === 'DAY_14');
+
+      const bothCompleted =
+        day3?.status === 'COMPLETED' && day3?.followUp &&
+        day14?.status === 'COMPLETED' && day14?.followUp;
+
+      if (bothCompleted) {
+        // Verify no severe side effects in either follow-up
+        const day3FollowUp = day3.followUp;
+        const day14FollowUp = day14.followUp;
+
+        const noSevereReactions =
+          day3FollowUp?.sideEffectSeverity !== 'SEVERE' &&
+          day14FollowUp?.sideEffectSeverity !== 'SEVERE' &&
+          day3FollowUp?.stillTakingMedication !== false &&
+          day14FollowUp?.stillTakingMedication !== false;
+
+        if (noSevereReactions) {
+          await prisma.switchRecord.update({
+            where: { id: appointment.switchId },
+            data: {
+              status: 'COMPLETED',
+              completionDate: new Date(),
+            },
+          });
+        }
+      }
+    }
+
     return followUp;
   }
 

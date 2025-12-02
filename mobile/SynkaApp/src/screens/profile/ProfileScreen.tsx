@@ -7,19 +7,69 @@ import {
   Alert,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Feather';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore, useLanguageStore } from '../../store';
 import { Button, LanguageSwitcher } from '../../components/common';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 import { syncService } from '../../services/syncService';
+import { clearAllData } from '../../database';
+import { adminApi } from '../../api/admin';
 
 const ProfileScreen = () => {
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
+  const queryClient = useQueryClient();
   useLanguageStore(); // Subscribe to language changes for re-render
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearLocalData = () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete ALL patient records, switches, and appointments from both your device and the server. This action cannot be undone. Continue?',
+      [
+        {
+          text: t('common.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: 'Clear All Data',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setIsClearing(true);
+              // Stop sync service first
+              syncService.stopAutoSync();
+
+              // Clear server data first
+              try {
+                await adminApi.resetData();
+              } catch (serverError) {
+                console.log('Server reset failed (may be offline):', serverError);
+              }
+
+              // Clear all local data
+              await clearAllData();
+              // Invalidate all queries to force refetch
+              queryClient.clear();
+              // Restart sync service
+              syncService.startAutoSync();
+              Alert.alert('Success', 'All data has been cleared. You can now start fresh with new patients.');
+            } catch (error) {
+              console.error('Error clearing data:', error);
+              Alert.alert('Error', 'Failed to clear data. Please try again.');
+            } finally {
+              setIsClearing(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleLogout = () => {
     Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
@@ -135,6 +185,26 @@ const ProfileScreen = () => {
             label={t('profile.storageUsed')}
             value="~2 MB"
           />
+          <View style={styles.menuDivider} />
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={handleClearLocalData}
+            disabled={isClearing}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.menuIconContainer, { backgroundColor: COLORS.error + '10' }]}>
+                <Icon name="trash-2" size={18} color={COLORS.error} />
+              </View>
+              <Text style={[styles.menuItemText, { color: COLORS.error }]}>Clear All Data</Text>
+            </View>
+            <View style={styles.menuItemRight}>
+              {isClearing ? (
+                <ActivityIndicator size="small" color={COLORS.error} />
+              ) : (
+                <Icon name="chevron-right" size={18} color={COLORS.textTertiary} />
+              )}
+            </View>
+          </TouchableOpacity>
         </View>
       </View>
 
