@@ -134,10 +134,10 @@ Includes: Project setup, database schema, authentication, navigation
 
 **Item 2:**
 ```
-Title: [US-1.1] Backend Project Setup
+Title: [TASK-1.1] Backend Project Setup
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 1
 Points: 3
 Assignee: Cameron
@@ -151,10 +151,10 @@ Acceptance Criteria:
 
 **Item 3:**
 ```
-Title: [US-1.2] Database Schema Design
+Title: [TASK-1.2] Database Schema Design
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 1
 Points: 5
 Assignee: Basanta
@@ -168,10 +168,10 @@ Acceptance Criteria:
 
 **Item 4:**
 ```
-Title: [US-1.3] JWT Authentication System
+Title: [TASK-1.3] JWT Authentication System
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 1
 Points: 5
 Assignee: Basanta
@@ -186,10 +186,10 @@ Acceptance Criteria:
 
 **Item 5:**
 ```
-Title: [US-1.4] Mobile App Setup & Navigation
+Title: [TASK-1.4] Mobile App Setup & Navigation
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 1
 Points: 5
 Assignee: Sollomon
@@ -204,10 +204,10 @@ Acceptance Criteria:
 
 **Item 6:**
 ```
-Title: [US-1.5] Local SQLite Database
+Title: [TASK-1.5] Local SQLite Database
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 1
 Points: 3
 Assignee: Sollomon
@@ -294,10 +294,10 @@ Acceptance Criteria:
 
 **Item 11:**
 ```
-Title: [US-2.4] Offline Sync Queue
+Title: [TASK-2.4] Offline Sync Queue
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 2
 Points: 8
 Assignee: Cameron
@@ -313,10 +313,10 @@ Acceptance Criteria:
 
 **Item 12:**
 ```
-Title: [US-2.5] Patient API Endpoints
+Title: [TASK-2.5] Patient API Endpoints
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 2
 Points: 5
 Assignee: Basanta
@@ -349,10 +349,10 @@ End-to-end switch workflow with eligibility engine
 
 **Item 14:**
 ```
-Title: [US-3.1] Eligibility Checker Engine
+Title: [TASK-3.1] Eligibility Checker Engine
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 3
 Points: 8
 Assignee: Basanta
@@ -423,10 +423,10 @@ Acceptance Criteria:
 
 **Item 18:**
 ```
-Title: [US-3.5] Switch API Endpoints
+Title: [TASK-3.5] Switch API Endpoints
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 3
 Points: 5
 Assignee: Basanta
@@ -459,10 +459,10 @@ Appointment tracking and follow-up data collection
 
 **Item 20:**
 ```
-Title: [US-4.1] Automatic Appointment Scheduling
+Title: [TASK-4.1] Automatic Appointment Scheduling
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 4
 Points: 5
 Assignee: Basanta
@@ -511,10 +511,10 @@ Acceptance Criteria:
 
 **Item 23:**
 ```
-Title: [US-4.4] Follow-up Recording API
+Title: [TASK-4.4] Follow-up Recording API
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 4
 Points: 3
 Assignee: Basanta
@@ -546,10 +546,10 @@ Program metrics and visual analytics
 
 **Item 25:**
 ```
-Title: [US-5.1] Dashboard Metrics API
+Title: [TASK-5.1] Dashboard Metrics API
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 5
 Points: 5
 Assignee: Cameron
@@ -583,10 +583,10 @@ Acceptance Criteria:
 
 **Item 27:**
 ```
-Title: [US-5.3] Alerts System
+Title: [TASK-5.3] Alerts System
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 5
 Points: 3
 Assignee: Cameron
@@ -675,16 +675,16 @@ SMS reminders for appointments (schema exists, needs implementation)
 
 **Item 32:**
 ```
-Title: [US-7.1] Twilio SMS Integration
+Title: [TASK-7.1] Twilio SMS Integration
 
 Description:
-Type: User Story
+Type: Task
 Sprint: Sprint 6
 Points: 8
 Assignee: Cameron
 Priority: P1-High
 
-As a system, I want to send SMS via Twilio so patients receive reminders.
+Integrate Twilio SDK for SMS sending capability.
 
 Acceptance Criteria:
 - [ ] Twilio SDK integrated
@@ -863,13 +863,7 @@ Status: Deferred to v2
 Title: [DEFERRED] Advanced Reporting & Export
 
 Description:
-Type: Epic
-Priority: P2-Medium
-Status: Deferred to v2
 
-- Export data to CSV/Excel
-- Trend analysis charts
-- Custom date range reports
 ```
 
 **Item 43:**
@@ -961,16 +955,19 @@ Go to: **Issues → Labels → New label**
 ```
 Backlog              Sprint 6 (Current)     In Progress    Review    Done
 ──────────────────   ────────────────────   ────────────   ───────   ─────────────────
-[DEFERRED] iOS       [EPIC] SMS Notif                                [EPIC] Foundation
-[DEFERRED] Push      [US-7.1] Twilio                                 [US-1.1] - [US-1.5]
-[DEFERRED] Reports   [US-7.2] Auto SMS                               [EPIC] Patients
-[DEFERRED] Multi     [TASK] E2E Testing                              [US-2.1] - [US-2.5]
-[DEFERRED] Consent   [TASK] Bug Fixes                                [EPIC] Switches
-                     [TASK] UI Polish                                [US-3.1] - [US-3.5]
-                     [TASK] Localization                             [EPIC] Appointments
-                     [TASK] Documentation                            [US-4.1] - [US-4.4]
-                     [TASK] Demo Prep                                [EPIC] Dashboard
-                                                                     [US-5.1] - [US-5.3]
+[EPIC] iOS           [EPIC] SMS Notif                                [EPIC] Foundation
+[EPIC] Push          [TASK-7.1] Twilio                               [TASK-1.1] - [TASK-1.5]
+[EPIC] Reports       [US-7.2] Auto SMS                               [EPIC] Patients
+[EPIC] Multi-Clinic  [TASK] E2E Testing                              [US-2.1] - [US-2.3]
+[EPIC] Consent       [TASK] Bug Fixes                                [TASK-2.4] - [TASK-2.5]
+                     [TASK] UI Polish                                [EPIC] Switches
+                     [TASK] Localization                             [TASK-3.1], [US-3.2] - [US-3.4]
+                     [TASK] Documentation                            [TASK-3.5]
+                     [TASK] Demo Prep                                [EPIC] Appointments
+                                                                     [TASK-4.1], [US-4.2] - [US-4.3]
+                                                                     [TASK-4.4]
+                                                                     [EPIC] Dashboard
+                                                                     [TASK-5.1], [US-5.2], [TASK-5.3]
                                                                      [EPIC] Profile
                                                                      [US-6.1] - [US-6.2]
 ```
