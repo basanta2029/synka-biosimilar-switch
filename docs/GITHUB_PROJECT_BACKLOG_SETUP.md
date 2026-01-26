@@ -835,7 +835,7 @@ Add these items and place in the **Backlog** column:
 Title: [DEFERRED] iOS App Support
 
 Description:
-Type: User Story
+Type: Epic
 Priority: P3-Low
 Status: Deferred to v2
 
@@ -849,7 +849,7 @@ Status: Deferred to v2
 Title: [DEFERRED] Push Notifications
 
 Description:
-Type: User Story
+Type: Epic
 Priority: P2-Medium
 Status: Deferred to v2
 
@@ -863,7 +863,7 @@ Status: Deferred to v2
 Title: [DEFERRED] Advanced Reporting & Export
 
 Description:
-Type: User Story
+Type: Epic
 Priority: P2-Medium
 Status: Deferred to v2
 
@@ -877,7 +877,7 @@ Status: Deferred to v2
 Title: [DEFERRED] Multi-Clinic Support
 
 Description:
-Type: User Story
+Type: Epic
 Priority: P2-Medium
 Status: Deferred to v2
 
@@ -891,7 +891,7 @@ Status: Deferred to v2
 Title: [DEFERRED] Digital Consent Signatures
 
 Description:
-Type: User Story
+Type: Epic
 Priority: P2-Medium
 Status: Deferred to v2
 
