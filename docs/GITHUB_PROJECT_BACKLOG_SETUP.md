@@ -57,7 +57,6 @@ Title: [EPIC] Foundation & Setup
 
 Type: Epic
 Sprint: Sprint 1
-Points: 21
 Priority: P0-Critical
 
 Acceptance Criteria:
@@ -160,7 +159,6 @@ Title: [EPIC] Patient Management
 
 Type: Epic
 Sprint: Sprint 2
-Points: 24
 Priority: P0-Critical
 
 Acceptance Criteria:
@@ -268,7 +266,6 @@ Title: [EPIC] Biosimilar Switch Workflow
 
 Type: Epic
 Sprint: Sprint 3
-Points: 28
 Priority: P0-Critical
 
 Acceptance Criteria:
@@ -376,7 +373,6 @@ Title: [EPIC] Appointments & Follow-ups
 
 Type: Epic
 Sprint: Sprint 4
-Points: 18
 Priority: P0-Critical
 
 Acceptance Criteria:
@@ -461,7 +457,6 @@ Title: [EPIC] Dashboard & Analytics
 
 Type: Epic
 Sprint: Sprint 5
-Points: 13
 Priority: P0-Critical
 
 Acceptance Criteria:
@@ -527,7 +522,6 @@ Title: [EPIC] Profile & Settings
 
 Type: Epic
 Sprint: Sprint 5
-Points: 8
 Priority: P1-High
 
 Acceptance Criteria:
@@ -581,7 +575,6 @@ Title: [EPIC] SMS Notifications
 
 Type: Epic
 Sprint: Sprint 6
-Points: 13
 Priority: P1-High
 
 Acceptance Criteria:
