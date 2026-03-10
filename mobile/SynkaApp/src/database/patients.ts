@@ -213,11 +213,23 @@ export const patientsDb = {
 
   /**
    * Upsert patient from server (insert or update with synced=1)
+   * Respects local deletions - won't restore deleted patients
    */
   upsertFromServer: async (patient: Patient): Promise<void> => {
     const db = await getDatabase();
 
     try {
+      // Check if this patient was locally deleted
+      const [deletedResults] = await db.executeSql(
+        'SELECT id FROM deleted_patients WHERE id = ?',
+        [patient.id]
+      );
+
+      if (deletedResults.rows.length > 0) {
+        console.log(`Skipping upsert for deleted patient ${patient.id}`);
+        return;
+      }
+
       // Check if patient exists
       const [results] = await db.executeSql('SELECT id FROM patients WHERE id = ?', [patient.id]);
 
@@ -264,13 +276,33 @@ export const patientsDb = {
 
   /**
    * Batch upsert patients from server
+   * Respects local deletions - won't restore deleted patients
    */
   batchUpsertFromServer: async (patients: Patient[]): Promise<void> => {
     const db = await getDatabase();
 
     try {
+      // Get list of locally deleted patient IDs
+      const [deletedResults] = await db.executeSql('SELECT id FROM deleted_patients');
+      const deletedIds = new Set<string>();
+      for (let i = 0; i < deletedResults.rows.length; i++) {
+        deletedIds.add(deletedResults.rows.item(i).id);
+      }
+
+      // Filter out deleted patients
+      const patientsToUpsert = patients.filter((p) => !deletedIds.has(p.id));
+
+      if (patientsToUpsert.length < patients.length) {
+        console.log(`Skipping ${patients.length - patientsToUpsert.length} deleted patients from server sync`);
+      }
+
+      if (patientsToUpsert.length === 0) {
+        console.log('No patients to upsert after filtering deletions');
+        return;
+      }
+
       await db.transaction((tx) => {
-        patients.forEach((patient) => {
+        patientsToUpsert.forEach((patient) => {
           tx.executeSql(
             `INSERT OR REPLACE INTO patients (id, name, phone, dateOfBirth, language, allergies, createdAt, updatedAt, synced)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
@@ -287,9 +319,106 @@ export const patientsDb = {
           );
         });
       });
-      console.log(`Batch upserted ${patients.length} patients from server`);
+      console.log(`Batch upserted ${patientsToUpsert.length} patients from server`);
     } catch (error) {
       console.error('Error batch upserting patients from server:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Track a patient deletion to prevent server sync from restoring it
+   */
+  trackDeletion: async (id: string): Promise<void> => {
+    const db = await getDatabase();
+
+    try {
+      const now = new Date().toISOString();
+      await db.executeSql(
+        'INSERT OR REPLACE INTO deleted_patients (id, deletedAt, syncedDeletion) VALUES (?, ?, 0)',
+        [id, now]
+      );
+      console.log(`Tracked deletion of patient ${id}`);
+    } catch (error) {
+      console.error('Error tracking patient deletion:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Mark a deletion as synced to server
+   */
+  markDeletionSynced: async (id: string): Promise<void> => {
+    const db = await getDatabase();
+
+    try {
+      await db.executeSql(
+        'UPDATE deleted_patients SET syncedDeletion = 1 WHERE id = ?',
+        [id]
+      );
+    } catch (error) {
+      console.error('Error marking deletion as synced:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Remove synced deletions older than given days (cleanup)
+   */
+  cleanupOldDeletions: async (daysOld: number = 30): Promise<number> => {
+    const db = await getDatabase();
+
+    try {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+      const [countResult] = await db.executeSql(
+        'SELECT COUNT(*) as count FROM deleted_patients WHERE syncedDeletion = 1 AND deletedAt < ?',
+        [cutoffDate.toISOString()]
+      );
+      const count = countResult.rows.item(0).count;
+
+      await db.executeSql(
+        'DELETE FROM deleted_patients WHERE syncedDeletion = 1 AND deletedAt < ?',
+        [cutoffDate.toISOString()]
+      );
+
+      console.log(`Cleaned up ${count} old synced deletions`);
+      return count;
+    } catch (error) {
+      console.error('Error cleaning up old deletions:', error);
+      return 0;
+    }
+  },
+
+  /**
+   * Check if a patient is in the deleted list
+   */
+  isDeleted: async (id: string): Promise<boolean> => {
+    const db = await getDatabase();
+
+    try {
+      const [results] = await db.executeSql(
+        'SELECT id FROM deleted_patients WHERE id = ?',
+        [id]
+      );
+      return results.rows.length > 0;
+    } catch (error) {
+      console.error('Error checking if patient is deleted:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Remove from deleted list (if user re-creates patient with same ID)
+   */
+  untrackDeletion: async (id: string): Promise<void> => {
+    const db = await getDatabase();
+
+    try {
+      await db.executeSql('DELETE FROM deleted_patients WHERE id = ?', [id]);
+    } catch (error) {
+      console.error('Error untracking patient deletion:', error);
       throw error;
     }
   },

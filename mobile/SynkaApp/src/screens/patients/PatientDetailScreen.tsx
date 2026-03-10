@@ -105,9 +105,9 @@ const PatientDetailScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'GHS',
       maximumFractionDigits: 0,
     }).format(amount);
   };

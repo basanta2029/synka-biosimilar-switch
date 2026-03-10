@@ -67,8 +67,8 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     // Pre-populate consent text
     setConsentText(
       `I consent to switching from ${selectedBrandDrug?.name} to ${biosimilar.name}. ` +
-      `I understand that ${biosimilar.name} is an FDA-approved ${biosimilar.interchangeability === 'INTERCHANGEABLE' ? 'interchangeable ' : ''}biosimilar ` +
-      `that provides the same therapeutic benefit at a lower cost.`
+      `I understand that ${biosimilar.name} is a Ghana Food and Drugs Authority (Ghana FDA)–approved biosimilar medicine ` +
+      `and that my clinic has decided this switch will provide the same therapeutic benefit at a lower cost.`
     );
     setCurrentStep('CONSENT');
   };
@@ -102,9 +102,9 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'GHS',
       maximumFractionDigits: 0,
     }).format(amount);
   };
@@ -269,7 +269,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Select Biosimilar</Text>
       <Text style={styles.stepDescription}>
-        Choose the FDA-approved biosimilar for the switch
+        Choose the Ghana FDA–approved biosimilar option your clinic recommends for this patient
       </Text>
 
       {eligibilityResult?.recommendedBiosimilars.map((biosimilar) => (
@@ -284,7 +284,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
           {biosimilar.interchangeability === 'INTERCHANGEABLE' && (
             <View style={styles.interchangeableBadge}>
               <Icon name="award" size={12} color={COLORS.success} />
-              <Text style={styles.interchangeableText}>FDA INTERCHANGEABLE</Text>
+              <Text style={styles.interchangeableText}>CLINIC PREFERRED</Text>
             </View>
           )}
 

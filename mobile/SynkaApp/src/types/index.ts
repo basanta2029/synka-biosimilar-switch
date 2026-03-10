@@ -59,7 +59,7 @@ export interface Drug {
   manufacturer?: string;
   description?: string;
   createdAt: string;
-  // FDA Purple Book Fields
+  // Regulatory reference fields (e.g., US FDA, EMA, WHO)
   activeIngredient?: string;
   fdaSuffix?: string;
   blaNumber?: string;

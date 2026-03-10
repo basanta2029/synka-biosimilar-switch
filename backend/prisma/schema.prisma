@@ -27,8 +27,8 @@ enum DrugType {
 
 enum InterchangeabilityStatus {
   NOT_APPLICABLE    // For brand/reference products
-  BIOSIMILAR        // Approved as biosimilar only
-  INTERCHANGEABLE   // FDA-approved interchangeable (can substitute at pharmacy)
+  BIOSIMILAR        // Approved as biosimilar only by a reference NRA
+  INTERCHANGEABLE   // Designated interchangeable by at least one strict NRA; does NOT imply automatic substitution under Ghana FDA
 }
 
 enum SwitchStatus {
@@ -108,11 +108,11 @@ model Drug {
   description             String?
   createdAt               DateTime                  @default(now())
 
-  // FDA Purple Book Fields
+  // Regulatory reference fields (e.g., US FDA, EMA, WHO)
   activeIngredient        String?                   // Proper name (e.g., "adalimumab", "infliximab")
-  fdaSuffix               String?                   // FDA-assigned suffix (e.g., "-atto", "-adbm")
-  blaNumber               String?                   // Biologics License Application number
-  fdaApprovalDate         DateTime?                 // Date of FDA approval
+  fdaSuffix               String?                   // Suffix assigned by a reference NRA (e.g., "-atto", "-adbm")
+  blaNumber               String?                   // Biologics License Application (or equivalent) number
+  fdaApprovalDate         DateTime?                 // Date of first approval by a reference NRA
   interchangeability      InterchangeabilityStatus  @default(NOT_APPLICABLE)
   referenceProductId      String?                   // For biosimilars: links to the brand reference product
   referenceProduct        Drug?                     @relation("BiosimilarReference", fields: [referenceProductId], references: [id])

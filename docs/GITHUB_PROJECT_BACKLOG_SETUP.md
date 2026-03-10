@@ -806,7 +806,6 @@ When your team starts working:
 2. Drag it to **In Progress**
 3. When code is done, drag to **Review**
 4. When tested, drag to **Done**
-
 ---
 
 ## Final Board Should Look Like:

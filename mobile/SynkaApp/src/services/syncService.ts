@@ -59,43 +59,92 @@ class SyncService {
     let failedCount = 0;
 
     try {
-      // Get pending items from sync queue
-      const pendingItems = await syncQueueDb.getPending(SYNC_CONFIG.BATCH_SIZE);
+      // Periodically clean up old synced deletions (every sync cycle)
+      await patientsDb.cleanupOldDeletions(30);
 
-      // Check for orphaned unsynced patients (marked unsynced but not in queue)
-      if (pendingItems.length === 0) {
-        const unsyncedPatients = await patientsDb.getUnsynced();
-        if (unsyncedPatients.length > 0) {
-          console.log(`Found ${unsyncedPatients.length} orphaned unsynced patients, re-queuing...`);
-          for (const patient of unsyncedPatients) {
-            await this.queuePatientSync('create', patient.id, patient);
+      // STEP 1: Directly sync any unsynced patients (bypass queue to avoid race conditions)
+      const unsyncedPatients = await patientsDb.getUnsynced();
+      if (unsyncedPatients.length > 0) {
+        console.log(`Found ${unsyncedPatients.length} unsynced patients, syncing directly...`);
+        for (const patient of unsyncedPatients) {
+          try {
+            // Try to create on server
+            const created = await patientsApi.createPatient({
+              name: patient.name,
+              phone: patient.phone,
+              dateOfBirth: patient.dateOfBirth,
+              language: patient.language,
+              allergies: patient.allergies,
+            });
+
+            // Handle ID mismatch (server generates new UUID)
+            if (created.patient.id !== patient.id) {
+              console.log(`Server returned different ID for ${patient.name}: ${created.patient.id}`);
+              // Delete old local patient
+              await patientsDb.delete(patient.id);
+              // Remove any queue items for old ID
+              await syncQueueDb.removeByEntityId('patient', patient.id);
+              // Insert server patient as synced
+              await patientsDb.upsertFromServer(created.patient);
+            } else {
+              // IDs match - just mark as synced
+              await patientsDb.markAsSynced(patient.id);
+            }
+
+            // Remove from queue if it was there
+            await syncQueueDb.removeByEntityId('patient', patient.id);
+            successCount++;
+            console.log(`Successfully synced patient ${patient.name}`);
+          } catch (error: any) {
+            // Handle duplicate phone number (patient already exists on server)
+            if (error?.response?.status === 400 && error?.response?.data?.error?.includes('phone')) {
+              console.log(`Patient ${patient.name} already exists on server, marking as synced`);
+              await patientsDb.markAsSynced(patient.id);
+              await syncQueueDb.removeByEntityId('patient', patient.id);
+              successCount++;
+            } else {
+              console.error(`Failed to sync patient ${patient.name}:`, error.message);
+              failedCount++;
+            }
           }
-          // Get the newly queued items
-          const newPendingItems = await syncQueueDb.getPending(SYNC_CONFIG.BATCH_SIZE);
-          pendingItems.push(...newPendingItems);
         }
       }
 
-      console.log(`Syncing ${pendingItems.length} items...`);
+      // STEP 2: Process remaining queue items (updates, deletes, etc.)
+      const pendingItems = await syncQueueDb.getPending(SYNC_CONFIG.BATCH_SIZE);
+      // Filter out patient creates (already handled above)
+      const nonCreateItems = pendingItems.filter(
+        item => !(item.entityType === 'patient' && item.action === 'create')
+      );
 
-      for (const item of pendingItems) {
-        try {
-          await this.syncItem(item);
-          await syncQueueDb.remove(item.id!);
-          successCount++;
-        } catch (error: any) {
-          console.error(`Failed to sync item ${item.id}:`, error.message);
+      if (nonCreateItems.length > 0) {
+        console.log(`Syncing ${nonCreateItems.length} additional queue items...`);
+        for (const item of nonCreateItems) {
+          try {
+            await this.syncItem(item);
+            await syncQueueDb.remove(item.id!);
+            successCount++;
+          } catch (error: any) {
+            console.error(`Failed to sync item ${item.id}:`, error.message);
+            await syncQueueDb.updateRetry(item.id!, error.message);
+            if (item.retryCount >= SYNC_CONFIG.MAX_RETRIES) {
+              console.log(`Max retries exceeded for item ${item.id}, removing from queue`);
+              await syncQueueDb.remove(item.id!);
+            }
+            failedCount++;
+          }
+        }
+      }
 
-          // Update retry count
-          await syncQueueDb.updateRetry(item.id!, error.message);
-
-          // Remove from queue if max retries exceeded
-          if (item.retryCount >= SYNC_CONFIG.MAX_RETRIES) {
-            console.log(`Max retries exceeded for item ${item.id}, removing from queue`);
+      // STEP 3: Clean up any stale queue items for patients that are now synced
+      const allQueueItems = await syncQueueDb.getPending(1000);
+      for (const item of allQueueItems) {
+        if (item.entityType === 'patient' && item.action === 'create') {
+          const patient = await patientsDb.getById(item.entityId);
+          if (!patient || patient.synced) {
+            console.log(`Removing stale queue item for patient ${item.entityId}`);
             await syncQueueDb.remove(item.id!);
           }
-
-          failedCount++;
         }
       }
 
@@ -193,8 +242,19 @@ class SyncService {
 
       case 'delete':
         // Delete on server
-        await patientsApi.deletePatient(entityId);
-        console.log(`Patient ${entityId} deleted on server`);
+        try {
+          await patientsApi.deletePatient(entityId);
+          console.log(`Patient ${entityId} deleted on server`);
+        } catch (error: any) {
+          // 404 means patient doesn't exist on server - that's fine, it's deleted
+          if (error?.response?.status === 404) {
+            console.log(`Patient ${entityId} already deleted from server (404)`);
+          } else {
+            throw error;
+          }
+        }
+        // Mark the deletion as synced so we can clean it up later
+        await patientsDb.markDeletionSynced(entityId);
         break;
     }
   }
@@ -224,6 +284,15 @@ class SyncService {
   }
 
   /**
+   * Clear all pending sync operations for a patient
+   * Used when deleting a patient to prevent orphaned queue items
+   */
+  async clearPatientSyncQueue(patientId: string): Promise<void> {
+    await syncQueueDb.removeByEntityId('patient', patientId);
+    console.log(`Cleared sync queue for patient ${patientId}`);
+  }
+
+  /**
    * Get sync queue count
    */
   async getQueueCount(): Promise<number> {
@@ -239,13 +308,14 @@ class SyncService {
 
   /**
    * Re-queue all unsynced patients
-   * Useful when sync fails or to manually trigger resync
+   * Returns the number of patients queued (does NOT trigger sync - caller should call syncAll)
    */
   async requeueUnsyncedPatients(): Promise<number> {
     try {
       const unsyncedPatients = await patientsDb.getUnsynced();
       console.log(`Found ${unsyncedPatients.length} unsynced patients`);
 
+      let queuedCount = 0;
       for (const patient of unsyncedPatients) {
         // Check if already in queue
         const existingQueueItem = await syncQueueDb.getPending(1000);
@@ -254,18 +324,19 @@ class SyncService {
         );
 
         if (!alreadyQueued) {
-          await this.queuePatientSync('create', patient.id, patient);
+          // Queue without triggering immediate sync
+          await syncQueueDb.add({
+            entityType: 'patient',
+            entityId: patient.id,
+            action: 'create',
+            payload: JSON.stringify(patient),
+          });
           console.log(`Re-queued patient ${patient.id} for sync`);
+          queuedCount++;
         }
       }
 
-      // Trigger sync if online
-      const state = await NetInfo.fetch();
-      if (state.isConnected) {
-        await this.syncAll();
-      }
-
-      return unsyncedPatients.length;
+      return queuedCount;
     } catch (error) {
       console.error('Error requeuing unsynced patients:', error);
       return 0;

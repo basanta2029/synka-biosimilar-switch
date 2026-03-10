@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Project Reset Report</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Project Reset Report</h1>
+</header>
+<h1 id="synka-mvp---project-reset-report">Synka MVP - Project Reset
+Report</h1>
+<h2 id="senior-project-ii-readiness-assessment">Senior Project II
+Readiness Assessment</h2>
+<p><strong>Project:</strong> Synka - Biosimilar Switch Kit MVP<br />
+<strong>Team:</strong> Howard University Senior Project Team<br />
+<strong>Date:</strong> February 3, 2026<br />
+<strong>Assessment Period:</strong> Senior Project I (Fall 2024 - Winter
+2025)</p>
+<hr />
+<h2 id="architecture-diagram">1. Architecture Diagram</h2>
+<h3 id="system-architecture-overview">1.1 System Architecture
+Overview</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────────────────┐
+│                                    APP                                          │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│                               NAVIGATION                                        │
+│  ┌─────────────────┐      ┌──────────────────────────────────────────────────┐ │
+│  │                 │      │              Root Navigator                       │ │
+│  │  Auth Navigator │◄────►│                    │                              │ │
+│  │  • Login Screen │      │              Main Navigator                       │ │
+│  │  • Register     │      │   ┌────────────────┴────────────────┐            │ │
+│  │    Screen       │      │   │                                  │            │ │
+│  └─────────────────┘      │   ▼                                  ▼            │ │
+│                           │ Patients Navigator            (Bottom Tabs)       │ │
+│                           │   │                                               │ │
+│                           └───┼───────────────────────────────────────────────┘ │
+├───────────────────────────────┼─────────────────────────────────────────────────┤
+│                            SCREENS                                              │
+│  ┌──────────────┬──────────────┬──────────────┬──────────────┬──────────────┐  │
+│  │  Patients    │ Patient      │ Patient Form │  Switch      │ Login        │  │
+│  │  Screen      │ Detail Screen│ Screen       │  Workflow    │ Screen       │  │
+│  │              │              │              │  Screen      │              │  │
+│  └──────┬───────┴──────┬───────┴──────┬───────┴──────┬───────┴──────────────┘  │
+│         │              │              │              │                          │
+│  ┌──────┴───────┬──────┴───────┬──────┴───────┬──────┴───────┬──────────────┐  │
+│  │  Register    │ Dashboard    │ Appointments │ Profile      │              │  │
+│  │  Screen      │ Screen       │ Screen       │ Screen       │              │  │
+│  └──────────────┴──────┬───────┴──────┬───────┴──────┬───────┴──────────────┘  │
+├─────────────────────────┼──────────────┼──────────────┼──────────────┬──────────┤
+│                      SERVICES          │              │              │  STORE   │
+│  ┌──────────────────────────────────┐  │              │              ├──────────┤
+│  │         Sync Service             │  │              │              │Auth Store│
+│  │  • Background sync (30s)         │  │              │              │          │
+│  │  • Queue management              │  │              │              │Language  │
+│  │  • Conflict resolution           │  │              │              │Store     │
+│  └──────────────┬───────────────────┘  │              │              └──────────┤
+├─────────────────┼──────────────────────┼──────────────┼──────────────┬──────────┤
+│               API                      │              │              │  Async   │
+│  ┌──────────────┼──────────────────────┼──────────────┼──────────────┤ Storage  │
+│  │              ▼                      ▼              ▼              │          │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐   │          │
+│  │  │  Patients API   │  │  Switches API   │  │   Admin API     │   │          │
+│  │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘   │          │
+│  │           │                    │                    │            │          │
+│  │  ┌────────┴────────────────────┴────────────────────┴────────┐   │          │
+│  │  │                      Auth API                              │   │          │
+│  │  │  • JWT Token Management • Interceptors • Auto-refresh     │   │          │
+│  │  └────────────────────────────┬──────────────────────────────┘   │          │
+│  └───────────────────────────────┼──────────────────────────────────┘          │
+├──────────────────────────────────┼──────────────────────────────────────────────┤
+│                              DATABASE                                           │
+│  ┌───────────────────────────────┼───────────────────────────────────────────┐  │
+│  │                               ▼                                           │  │
+│  │  ┌─────────────────────────────────────────────────────────────────────┐ │  │
+│  │  │                       SQLite (Local)                                 │ │  │
+│  │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │ │  │
+│  │  │  │ Patients DB │  │ Sync Queue  │  │ Drugs DB    │  │ Switches   │  │ │  │
+│  │  │  │             │  │ DB          │  │             │  │ DB         │  │ │  │
+│  │  │  └─────────────┘  └─────────────┘  └─────────────┘  └────────────┘  │ │  │
+│  │  └─────────────────────────────────────────────────────────────────────┘ │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+                                        │
+                                        │ HTTP/REST API
+                                        ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           BACKEND SERVER (Node.js + Express)                     │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐         │
+│  │ Auth Routes  │  │Patient Routes│  │ Drug Routes  │  │Switch Routes │         │
+│  │ /api/v1/auth │  │/api/v1/      │  │/api/v1/drugs │  │/api/v1/      │         │
+│  │              │  │patients      │  │              │  │switches      │         │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
+│         │                 │                 │                 │                 │
+│  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐         │
+│  │    Auth      │  │   Patient    │  │    Drug      │  │   Switch     │         │
+│  │  Controller  │  │  Controller  │  │  Controller  │  │  Controller  │         │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘         │
+│         │                 │                 │                 │                 │
+│  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐  ┌──────┴───────┐         │
+│  │    Auth      │  │   Patient    │  │    Drug      │  │   Switch     │         │
+│  │   Service    │  │   Service    │  │   Service    │  │   Service    │         │
+│  └──────┬───────┘  └──────┴───────┘  └──────┴───────┘  └──────┴───────┘         │
+│         │                 │                 │                 │                 │
+│  ┌──────┴─────────────────┴─────────────────┴─────────────────┴───────┐         │
+│  │                        Prisma ORM                                   │         │
+│  │                   (Database Access Layer)                           │         │
+│  └────────────────────────────────┬───────────────────────────────────┘         │
+└───────────────────────────────────┼─────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           PostgreSQL / SQLite Database                          │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│  │  Users  │ │Patients │ │  Drugs  │ │Switches │ │Appoint- │ │Follow-  │       │
+│  │         │ │         │ │         │ │         │ │ ments   │ │ Ups     │       │
+│  └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘ └─────────┘       │
+│  ┌─────────┐ ┌─────────┐                                                        │
+│  │SMS Logs │ │ Alerts  │                                                        │
+│  └─────────┘ └─────────┘                                                        │
+└─────────────────────────────────────────────────────────────────────────────────┘</code></pre>
+<h3 id="data-flow-diagram">1.2 Data Flow Diagram</h3>
+<pre><code>┌──────────────────────────────────────────────────────────────────────────────┐
+│                           OFFLINE-FIRST DATA FLOW                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+User Action (Create/Update/Delete)
+        │
+        ▼
+┌───────────────────┐
+│   Mobile App UI   │
+│  (React Native)   │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐     ┌───────────────────┐
+│  Local SQLite DB  │◄───►│    Sync Queue     │
+│  (Immediate Save) │     │  (Pending Ops)    │
+└─────────┬─────────┘     └─────────┬─────────┘
+          │                         │
+          │    ┌────────────────────┘
+          │    │
+          ▼    ▼
+┌───────────────────┐
+│   Network Check   │
+│  (NetInfo API)    │
+└─────────┬─────────┘
+          │
+    ┌─────┴─────┐
+    │           │
+    ▼           ▼
+┌────────┐  ┌────────────┐
+│ Online │  │  Offline   │
+└────┬───┘  └─────┬──────┘
+     │            │
+     ▼            ▼
+┌──────────┐  ┌──────────────┐
+│ Sync to  │  │ Queue grows  │
+│ Server   │  │ (FIFO order) │
+└────┬─────┘  └──────────────┘
+     │
+     ▼
+┌───────────────────┐
+│   Backend API     │
+│ (Express Server)  │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│  PostgreSQL/SQLite│
+│    Database       │
+└───────────────────┘
+
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                        BIOSIMILAR SWITCH WORKFLOW                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+Step 1: SELECT_DRUG          Step 2: ELIGIBILITY           Step 3: SELECT_BIOSIMILAR
+┌─────────────────┐          ┌─────────────────┐          ┌─────────────────┐
+│ Load Brand Drugs│    ─►    │ Check Patient   │    ─►    │ Show Biosimilar │
+│ from API        │          │ Eligibility     │          │ Options + Cost  │
+│                 │          │ • Age check     │          │ Savings         │
+│ User selects    │          │ • Allergy check │          │                 │
+│ current drug    │          │ • Diagnosis     │          │ User selects    │
+└─────────────────┘          └─────────────────┘          └─────────────────┘
+                                                                  │
+                                                                  ▼
+Step 5: CONFIRMATION         Step 4: CONSENT
+┌─────────────────┐          ┌─────────────────┐
+│ Display Summary │    ◄─    │ Record Patient  │
+│ • Switch details│          │ Consent         │
+│ • Appointments  │          │ • Consent text  │
+│ • Cost savings  │          │ • Timestamp     │
+│                 │          │                 │
+│ Create:         │          │ Create Switch   │
+│ • SwitchRecord  │          │ Record in DB    │
+│ • Day-3 Appt    │          └─────────────────┘
+│ • Day-14 Appt   │
+└─────────────────┘</code></pre>
+<hr />
+<h2 id="architecture-explanation">2. Architecture Explanation</h2>
+<h3 id="system-overview">2.1 System Overview</h3>
+<p>Synka is a <strong>mobile-first, offline-capable</strong> healthcare
+application designed to manage biosimilar medication switches in
+emerging markets. The architecture follows a <strong>three-tier
+model</strong>:</p>
+<h4 id="presentation-layer-mobile-app">Presentation Layer (Mobile
+App)</h4>
+<ul>
+<li><strong>Framework:</strong> React Native 0.82.1 with TypeScript</li>
+<li><strong>State Management:</strong> Zustand for auth/language, React
+Query for server state</li>
+<li><strong>Navigation:</strong> React Navigation with nested stack and
+tab navigators</li>
+<li><strong>UI Library:</strong> React Native Paper (Material
+Design)</li>
+</ul>
+<h4 id="application-layer-backend-api">Application Layer (Backend
+API)</h4>
+<ul>
+<li><strong>Framework:</strong> Node.js 18 + Express.js with
+TypeScript</li>
+<li><strong>Authentication:</strong> JWT-based with 7-day token
+expiration</li>
+<li><strong>Validation:</strong> Formik + Yup (client), custom
+middleware (server)</li>
+<li><strong>ORM:</strong> Prisma 5.x for database operations</li>
+</ul>
+<h4 id="data-layer">Data Layer</h4>
+<ul>
+<li><strong>Server Database:</strong> SQLite (development) / PostgreSQL
+(production ready)</li>
+<li><strong>Mobile Database:</strong> react-native-sqlite-storage for
+offline persistence</li>
+<li><strong>8 Database Tables:</strong> users, patients, drugs,
+switch_records, appointments, follow_ups, sms_logs, alerts</li>
+</ul>
+<h3 id="key-architectural-patterns">2.2 Key Architectural Patterns</h3>
+<h4 id="offline-first-architecture">Offline-First Architecture</h4>
+<p>The app implements a robust offline-first pattern: 1. All CRUD
+operations save to local SQLite immediately 2. Changes queue in
+<code>sync_queue</code> table when offline 3. Background sync service
+polls every 30 seconds 4. Server-wins conflict resolution strategy 5.
+Visual indicators show sync status to users</p>
+<h4 id="component-based-ui-structure">Component-Based UI Structure</h4>
+<pre><code>Navigation Layer
+├── RootNavigator (Auth conditional)
+├── AuthNavigator (Login, Register)
+├── MainNavigator (Bottom tabs)
+└── PatientsNavigator (Stack)
+
+Screen Layer
+├── Patients (List, Detail, Form)
+├── Switches (Workflow - 5 steps)
+├── Appointments (List)
+├── Dashboard (Metrics)
+└── Profile (Settings)</code></pre>
+<h4 id="service-layer-pattern">Service Layer Pattern</h4>
+<pre><code>API Layer (Axios)
+├── Auth API (register, login, me)
+├── Patients API (CRUD + search)
+├── Drugs API (list, biosimilars)
+├── Switches API (workflow, eligibility)
+└── Admin API (dashboard metrics)</code></pre>
+<h3 id="technology-stack-summary">2.3 Technology Stack Summary</h3>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mobile</td>
+<td>React Native 0.82.1</td>
+<td>Cross-platform app</td>
+</tr>
+<tr>
+<td>Language</td>
+<td>TypeScript 5.8</td>
+<td>Type safety</td>
+</tr>
+<tr>
+<td>Navigation</td>
+<td>React Navigation 7.x</td>
+<td>Screen routing</td>
+</tr>
+<tr>
+<td>State</td>
+<td>Zustand 5.x</td>
+<td>Client state</td>
+</tr>
+<tr>
+<td>Server State</td>
+<td>React Query 5.x</td>
+<td>Caching, sync</td>
+</tr>
+<tr>
+<td>Forms</td>
+<td>Formik + Yup</td>
+<td>Validation</td>
+</tr>
+<tr>
+<td>Local DB</td>
+<td>SQLite</td>
+<td>Offline storage</td>
+</tr>
+<tr>
+<td>Backend</td>
+<td>Express.js</td>
+<td>REST API</td>
+</tr>
+<tr>
+<td>ORM</td>
+<td>Prisma 5.x</td>
+<td>DB abstraction</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>JWT + bcrypt</td>
+<td>Security</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="technical-debt-risk-identification">3. Technical Debt &amp; Risk
+Identification</h2>
+<h3 id="technical-debt">3.1 Technical Debt</h3>
+<table>
+<colgroup>
+<col style="width: 7%" />
+<col style="width: 19%" />
+<col style="width: 17%" />
+<col style="width: 14%" />
+<col style="width: 17%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Debt Item</th>
+<th>Severity</th>
+<th>Impact</th>
+<th>Location</th>
+<th>Remediation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TD-1</td>
+<td><strong>SMS Integration Not Implemented</strong></td>
+<td>HIGH</td>
+<td>Patients won’t receive appointment reminders</td>
+<td><code>backend/src/services/</code></td>
+<td>Integrate Twilio SDK, create SMS queue, implement cron job</td>
+</tr>
+<tr>
+<td>TD-2</td>
+<td><strong>SQLite in Production Backend</strong></td>
+<td>MEDIUM</td>
+<td>Limited scalability, no multi-user support</td>
+<td><code>backend/prisma/schema.prisma</code></td>
+<td>Migrate to PostgreSQL before deployment</td>
+</tr>
+<tr>
+<td>TD-3</td>
+<td><strong>No Automated Tests</strong></td>
+<td>HIGH</td>
+<td>Regression risk, deployment fear</td>
+<td><code>mobile/SynkaApp/__tests__/</code></td>
+<td>Add Jest tests for critical paths (&gt;70% coverage goal)</td>
+</tr>
+<tr>
+<td>TD-4</td>
+<td><strong>Hardcoded API URL</strong></td>
+<td>LOW</td>
+<td>Deployment issues</td>
+<td><code>mobile/SynkaApp/src/constants/</code></td>
+<td>Move to environment variables</td>
+</tr>
+<tr>
+<td>TD-5</td>
+<td><strong>Missing Error Boundaries</strong></td>
+<td>MEDIUM</td>
+<td>App crashes on unhandled errors</td>
+<td><code>mobile/SynkaApp/App.tsx</code></td>
+<td>Add React error boundaries</td>
+</tr>
+<tr>
+<td>TD-6</td>
+<td><strong>Incomplete Localization</strong></td>
+<td>MEDIUM</td>
+<td>Spanish users see mixed languages</td>
+<td><code>mobile/SynkaApp/src/locales/</code></td>
+<td>Complete es.json translations</td>
+</tr>
+<tr>
+<td>TD-7</td>
+<td><strong>No API Rate Limiting</strong></td>
+<td>MEDIUM</td>
+<td>DoS vulnerability</td>
+<td><code>backend/src/middleware/</code></td>
+<td>Add express-rate-limit middleware</td>
+</tr>
+<tr>
+<td>TD-8</td>
+<td><strong>Missing Input Sanitization</strong></td>
+<td>HIGH</td>
+<td>XSS/Injection risk</td>
+<td><code>backend/src/controllers/</code></td>
+<td>Add input sanitization library</td>
+</tr>
+<tr>
+<td>TD-9</td>
+<td><strong>Sync Conflicts Not Logged</strong></td>
+<td>LOW</td>
+<td>Data issues undetectable</td>
+<td><code>mobile/SynkaApp/src/services/</code></td>
+<td>Add conflict logging table</td>
+</tr>
+<tr>
+<td>TD-10</td>
+<td><strong>No Database Encryption</strong></td>
+<td>MEDIUM</td>
+<td>PHI exposure risk</td>
+<td><code>mobile/SynkaApp/src/database/</code></td>
+<td>Implement SQLCipher encryption</td>
+</tr>
+</tbody>
+</table>
+<h3 id="risk-assessment">3.2 Risk Assessment</h3>
+<table>
+<colgroup>
+<col style="width: 6%" />
+<col style="width: 9%" />
+<col style="width: 19%" />
+<col style="width: 13%" />
+<col style="width: 16%" />
+<col style="width: 34%" />
+</colgroup>
+<thead>
+<tr>
+<th>ID</th>
+<th>Risk</th>
+<th>Likelihood</th>
+<th>Impact</th>
+<th>Severity</th>
+<th>Mitigation Strategy</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R-1</td>
+<td><strong>SMS costs exceed budget</strong></td>
+<td>Medium</td>
+<td>Medium</td>
+<td>MEDIUM</td>
+<td>Use Twilio trial credits (500 SMS free), limit pilot size, implement
+rate limiting</td>
+</tr>
+<tr>
+<td>R-2</td>
+<td><strong>Offline sync data loss</strong></td>
+<td>Low</td>
+<td>High</td>
+<td>MEDIUM</td>
+<td>Extensive testing of sync queue, add conflict logging, implement
+manual conflict resolution UI</td>
+</tr>
+<tr>
+<td>R-3</td>
+<td><strong>12-week timeline insufficient</strong></td>
+<td>High</td>
+<td>High</td>
+<td>HIGH</td>
+<td>Prioritize core switch flow, defer nice-to-haves (charts, exports),
+MVP-first approach</td>
+</tr>
+<tr>
+<td>R-4</td>
+<td><strong>Team React Native inexperience</strong></td>
+<td>Medium</td>
+<td>High</td>
+<td>HIGH</td>
+<td>Pair programming, code reviews, use established patterns, consult
+documentation</td>
+</tr>
+<tr>
+<td>R-5</td>
+<td><strong>Backend downtime during demo</strong></td>
+<td>Low</td>
+<td>Critical</td>
+<td>MEDIUM</td>
+<td>Deploy 1 week early, load test, prepare offline demo fallback</td>
+</tr>
+<tr>
+<td>R-6</td>
+<td><strong>HIPAA compliance gaps</strong></td>
+<td>Medium</td>
+<td>Critical</td>
+<td>HIGH</td>
+<td>Audit data handling, implement encryption, document security
+measures</td>
+</tr>
+<tr>
+<td>R-7</td>
+<td><strong>Drug data accuracy</strong></td>
+<td>Medium</td>
+<td>High</td>
+<td>HIGH</td>
+<td>Cross-reference FDA Purple Book, implement data validation</td>
+</tr>
+<tr>
+<td>R-8</td>
+<td><strong>Multi-device sync conflicts</strong></td>
+<td>Medium</td>
+<td>Medium</td>
+<td>MEDIUM</td>
+<td>Server-wins strategy implemented, add manual resolution for edge
+cases</td>
+</tr>
+</tbody>
+</table>
+<h3 id="known-issues">3.3 Known Issues</h3>
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 25%" />
+<col style="width: 31%" />
+<col style="width: 21%" />
+</colgroup>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Status</th>
+<th>Priority</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simulator stuck on Apple logo</td>
+<td>Resolved</td>
+<td>-</td>
+<td>Caused by disk space; freed 6.5GB</td>
+</tr>
+<tr>
+<td>Orphaned patient detection incomplete</td>
+<td>Open</td>
+<td>P2</td>
+<td>Need to handle edge cases</td>
+</tr>
+<tr>
+<td>Follow-up form doesn’t validate day-14 specific fields</td>
+<td>Open</td>
+<td>P1</td>
+<td>Missing satisfaction requirement</td>
+</tr>
+<tr>
+<td>Dashboard metrics don’t update in real-time</td>
+<td>Open</td>
+<td>P3</td>
+<td>Uses pull-to-refresh only</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="backlog-health-assessment">4. Backlog Health Assessment</h2>
+<h3 id="current-backlog-status">4.1 Current Backlog Status</h3>
+<p>Based on review of
+<code>docs/GITHUB_PROJECT_BACKLOG_SETUP.md</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Item Count</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Done</td>
+<td>30 items</td>
+<td>✅ Sprints 1-5 complete</td>
+</tr>
+<tr>
+<td>Sprint 6</td>
+<td>9 items</td>
+<td>🔄 Current sprint</td>
+</tr>
+<tr>
+<td>Backlog</td>
+<td>5 items</td>
+<td>📋 Future features (v2)</td>
+</tr>
+<tr>
+<td>In Progress</td>
+<td>0</td>
+<td>⏳ Not started</td>
+</tr>
+<tr>
+<td>Review</td>
+<td>0</td>
+<td>⏳ Nothing pending</td>
+</tr>
+</tbody>
+</table>
+<h3 id="sprint-completion-analysis">4.2 Sprint Completion Analysis</h3>
+<table>
+<colgroup>
+<col style="width: 21%" />
+<col style="width: 18%" />
+<col style="width: 18%" />
+<col style="width: 21%" />
+<col style="width: 18%" />
+</colgroup>
+<thead>
+<tr>
+<th>Sprint</th>
+<th>Focus</th>
+<th>Items</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Sprint 1</td>
+<td>Foundation</td>
+<td>6</td>
+<td>✅ 100%</td>
+<td>Backend + Mobile setup complete</td>
+</tr>
+<tr>
+<td>Sprint 2</td>
+<td>Patient Management</td>
+<td>6</td>
+<td>✅ 100%</td>
+<td>CRUD + offline sync working</td>
+</tr>
+<tr>
+<td>Sprint 3</td>
+<td>Switch Workflow</td>
+<td>6</td>
+<td>✅ 100%</td>
+<td>5-step workflow implemented</td>
+</tr>
+<tr>
+<td>Sprint 4</td>
+<td>Appointments</td>
+<td>5</td>
+<td>✅ 100%</td>
+<td>Auto-scheduling, follow-up forms</td>
+</tr>
+<tr>
+<td>Sprint 5</td>
+<td>Dashboard &amp; Profile</td>
+<td>7</td>
+<td>✅ 100%</td>
+<td>Metrics, alerts, settings</td>
+</tr>
+<tr>
+<td><strong>Sprint 6</strong></td>
+<td>SMS &amp; Polish</td>
+<td>9</td>
+<td>🔄 0%</td>
+<td>Not started</td>
+</tr>
+</tbody>
+</table>
+<h3 id="backlog-quality-assessment">4.3 Backlog Quality Assessment</h3>
+<h4 id="strengths">Strengths</h4>
+<ul>
+<li>✅ Clear item naming convention (<code>[EPIC]</code>,
+<code>[US-X.X]</code>, <code>[TASK-X.X]</code>)</li>
+<li>✅ Well-defined acceptance criteria per item</li>
+<li>✅ Story points assigned to tasks</li>
+<li>✅ Sprint assignments clear</li>
+<li>✅ Epics properly group related work</li>
+</ul>
+<h4 id="areas-for-improvement">Areas for Improvement</h4>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 69%" />
+</colgroup>
+<thead>
+<tr>
+<th>Issue</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No bug tracking items</td>
+<td>Add “Bug” item type for defect tracking</td>
+</tr>
+<tr>
+<td>Missing priority on all items</td>
+<td>Add P0-P3 priority labels consistently</td>
+</tr>
+<tr>
+<td>No blocked/dependencies shown</td>
+<td>Add dependency links between items</td>
+</tr>
+<tr>
+<td>Sprint 6 items have no assignees</td>
+<td>Assign owners before sprint start</td>
+</tr>
+<tr>
+<td>Missing “Tech Debt” label</td>
+<td>Add technical debt tracking</td>
+</tr>
+</tbody>
+</table>
+<h3 id="backlog-recommendations">4.4 Backlog Recommendations</h3>
+<ol type="1">
+<li><strong>Add Missing Items:</strong>
+<ul>
+<li>Bug: “Follow-up form validation incomplete”</li>
+<li>Task: “Add automated test suite”</li>
+<li>Task: “PostgreSQL migration”</li>
+<li>Task: “Security audit and fixes”</li>
+</ul></li>
+<li><strong>Re-prioritize Sprint 6:</strong>
+<ul>
+<li>Move “E2E Testing” to P0 (critical for demo)</li>
+<li>Move “Localization” to P2 (can demo in English)</li>
+<li>Add “Database encryption” as P1</li>
+</ul></li>
+<li><strong>Create Definition of Done Checklist:</strong>
+<ul class="task-list">
+<li><label><input type="checkbox" />Code reviewed</label></li>
+<li><label><input type="checkbox" />Unit tests passing</label></li>
+<li><label><input type="checkbox" />Works offline</label></li>
+<li><label><input type="checkbox" />Works in both languages</label></li>
+<li><label><input type="checkbox" />Documentation updated</label></li>
+</ul></li>
+</ol>
+<h2 id="senior-project-ii-priorities">5. Senior Project II
+Priorities</h2>
+<h3 id="immediate-priorities-sprint-6---current">5.1 Immediate
+Priorities (Sprint 6 - Current)</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 14%" />
+<col style="width: 19%" />
+<col style="width: 16%" />
+<col style="width: 26%" />
+</colgroup>
+<thead>
+<tr>
+<th>Priority</th>
+<th>Item</th>
+<th>Effort</th>
+<th>Owner</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P0</td>
+<td>Complete E2E Testing</td>
+<td>8 pts</td>
+<td>All</td>
+<td>Critical for demo confidence</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>Bug Fixes from Testing</td>
+<td>8 pts</td>
+<td>All</td>
+<td>Must be stable for presentation</td>
+</tr>
+<tr>
+<td>P0</td>
+<td>Demo Preparation</td>
+<td>5 pts</td>
+<td>Simon</td>
+<td>Required deliverable</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Twilio SMS Integration</td>
+<td>8 pts</td>
+<td>Cameron</td>
+<td>Core feature per PRD</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>Automated SMS Reminders</td>
+<td>5 pts</td>
+<td>Basanta</td>
+<td>Patient engagement</td>
+</tr>
+<tr>
+<td>P1</td>
+<td>UI Polish &amp; Error Handling</td>
+<td>5 pts</td>
+<td>Sollomon/Destin</td>
+<td>User experience</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Localization Completion</td>
+<td>3 pts</td>
+<td>Destin</td>
+<td>Spanish support</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>Documentation</td>
+<td>3 pts</td>
+<td>Simon</td>
+<td>Knowledge transfer</td>
+</tr>
+</tbody>
+</table>
+<h3 id="senior-project-ii-roadmap">5.2 Senior Project II Roadmap</h3>
+<h4 id="phase-1-stabilization-weeks-1-2">Phase 1: Stabilization (Weeks
+1-2)</h4>
+<ul>
+<li>Complete Sprint 6 items</li>
+<li>Conduct comprehensive testing</li>
+<li>Fix all critical bugs</li>
+<li>Prepare demo environment</li>
+</ul>
+<h4 id="phase-2-security-compliance-weeks-3-4">Phase 2: Security &amp;
+Compliance (Weeks 3-4)</h4>
+<ul>
+<li>Implement database encryption (SQLCipher)</li>
+<li>Add input sanitization</li>
+<li>Implement rate limiting</li>
+<li>Document security measures</li>
+</ul>
+<h4 id="phase-3-production-readiness-weeks-5-6">Phase 3: Production
+Readiness (Weeks 5-6)</h4>
+<ul>
+<li>Migrate to PostgreSQL</li>
+<li>Deploy to cloud (Railway/Render)</li>
+<li>Set up monitoring</li>
+<li>Load testing</li>
+</ul>
+<h4 id="phase-4-enhancement-weeks-7-8">Phase 4: Enhancement (Weeks
+7-8)</h4>
+<ul>
+<li>Advanced reporting/export</li>
+<li>Push notifications</li>
+<li>Performance optimization</li>
+<li>User feedback incorporation</li>
+</ul>
+<h4 id="phase-5-final-delivery-weeks-9-10">Phase 5: Final Delivery
+(Weeks 9-10)</h4>
+<ul>
+<li>Final testing round</li>
+<li>Documentation completion</li>
+<li>Knowledge transfer</li>
+<li>Final presentation</li>
+</ul>
+<h3 id="success-criteria-for-senior-project-ii">5.3 Success Criteria for
+Senior Project II</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Current</th>
+<th>Gap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patients registered</td>
+<td>&gt;50</td>
+<td>TBD</td>
+<td>Need pilot</td>
+</tr>
+<tr>
+<td>Complete switch workflows</td>
+<td>&gt;5</td>
+<td>TBD</td>
+<td>Need pilot</td>
+</tr>
+<tr>
+<td>SMS delivery rate</td>
+<td>&gt;95%</td>
+<td>0%</td>
+<td>Not implemented</td>
+</tr>
+<tr>
+<td>Offline sync success</td>
+<td>&gt;99%</td>
+<td>~95%</td>
+<td>Need testing</td>
+</tr>
+<tr>
+<td>App crash rate</td>
+<td>&lt;0.1%</td>
+<td>Unknown</td>
+<td>Need monitoring</td>
+</tr>
+<tr>
+<td>Test coverage</td>
+<td>&gt;70%</td>
+<td>&lt;5%</td>
+<td>Major gap</td>
+</tr>
+<tr>
+<td>Spanish translations</td>
+<td>100%</td>
+<td>~60%</td>
+<td>40% remaining</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="appendices">6. Appendices</h2>
+<h3 id="appendix-a-file-structure-reference">Appendix A: File Structure
+Reference</h3>
+<pre><code>synka/
+├── backend/
+│   ├── prisma/
+│   │   └── schema.prisma     # Database schema (8 models)
+│   └── src/
+│       ├── controllers/      # Request handlers (4 files)
+│       ├── services/         # Business logic (4 files)
+│       ├── routes/           # API endpoints (5 files)
+│       └── middleware/       # Auth, validation, errors
+├── mobile/SynkaApp/
+│   └── src/
+│       ├── api/              # API clients (6 files)
+│       ├── components/       # Reusable UI (5 files)
+│       ├── screens/          # App screens (10 files)
+│       ├── navigation/       # Navigators (5 files)
+│       ├── database/         # SQLite ops (4 files)
+│       ├── services/         # Sync service
+│       ├── store/            # Zustand stores (3 files)
+│       └── hooks/            # Custom hooks (1 file)
+└── docs/
+    ├── PRD_Synka_MVP.md      # Product requirements
+    └── GITHUB_PROJECT_BACKLOG_SETUP.md</code></pre>
+<h3 id="appendix-b-api-endpoints-implemented">Appendix B: API Endpoints
+Implemented</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Endpoint</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>POST</td>
+<td>/api/v1/auth/register</td>
+<td>✅</td>
+<td>User registration</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/auth/login</td>
+<td>✅</td>
+<td>JWT authentication</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/auth/me</td>
+<td>✅</td>
+<td>Current user</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients</td>
+<td>✅</td>
+<td>List with search</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/patients</td>
+<td>✅</td>
+<td>Create patient</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/patients/:id</td>
+<td>✅</td>
+<td>Get patient</td>
+</tr>
+<tr>
+<td>PUT</td>
+<td>/api/v1/patients/:id</td>
+<td>✅</td>
+<td>Update patient</td>
+</tr>
+<tr>
+<td>DELETE</td>
+<td>/api/v1/patients/:id</td>
+<td>✅</td>
+<td>Delete patient</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/drugs</td>
+<td>✅</td>
+<td>List drugs</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/drugs/:id/biosimilars</td>
+<td>✅</td>
+<td>Get alternatives</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/switches</td>
+<td>✅</td>
+<td>Create switch</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/switches/eligibility</td>
+<td>✅</td>
+<td>Check eligibility</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/switches/:id/consent</td>
+<td>✅</td>
+<td>Record consent</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/appointments/:id/follow-up</td>
+<td>✅</td>
+<td>Record follow-up</td>
+</tr>
+<tr>
+<td>GET</td>
+<td>/api/v1/admin/dashboard</td>
+<td>✅</td>
+<td>Dashboard metrics</td>
+</tr>
+<tr>
+<td>POST</td>
+<td>/api/v1/sms/send</td>
+<td>❌</td>
+<td>Not implemented</td>
+</tr>
+</tbody>
+</table>
+<h3 id="appendix-c-team-responsibilities">Appendix C: Team
+Responsibilities</h3>
+<table>
+<colgroup>
+<col style="width: 22%" />
+<col style="width: 16%" />
+<col style="width: 61%" />
+</colgroup>
+<thead>
+<tr>
+<th>Member</th>
+<th>Role</th>
+<th>Primary Responsibility</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simon Armstrong</td>
+<td>Scrum Leader</td>
+<td>Project management, documentation, demo</td>
+</tr>
+<tr>
+<td>Cameron Carter</td>
+<td>Technical Lead</td>
+<td>Architecture, sync service, SMS integration</td>
+</tr>
+<tr>
+<td>Basanta Baral</td>
+<td>Backend Dev</td>
+<td>API development, database, eligibility engine</td>
+</tr>
+<tr>
+<td>Sollomon Crowder</td>
+<td>Frontend Engineer</td>
+<td>Patient screens, dashboard, navigation</td>
+</tr>
+<tr>
+<td>Destin Gilbert</td>
+<td>Frontend Engineer</td>
+<td>Switch workflow, follow-up forms, localization</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><strong>Report Prepared By:</strong> Basanta Baral<br />
+<strong>Date:</strong> February 3, 2026<br />
+<strong>Version:</strong> 1.0</p>
+<hr />
+<p><em>This document serves as the Project Reset Report for Senior
+Project II, providing a comprehensive assessment of the Synka MVP’s
+current technical state and readiness for continued
+development.</em></p>
+</body>
+</html>

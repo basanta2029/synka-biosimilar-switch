@@ -7,10 +7,10 @@ const router = Router();
 // All drug routes require authentication
 router.use(authenticate);
 
-// POST /api/v1/drugs/seed - Seed FDA Purple Book drugs (development only)
+// POST /api/v1/drugs/seed - Seed example reference and biosimilar drugs (development only)
 router.post('/seed', (req, res, next) => drugController.seedDrugs(req, res, next));
 
-// GET /api/v1/drugs/interchangeable - Get all FDA-approved interchangeable biosimilars
+// GET /api/v1/drugs/interchangeable - Get all biosimilars marked as interchangeable by strict NRAs
 router.get('/interchangeable', (req, res, next) =>
   drugController.getInterchangeableBiosimilars(req, res, next)
 );

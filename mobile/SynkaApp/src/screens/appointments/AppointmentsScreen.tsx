@@ -109,7 +109,7 @@ const AppointmentsScreen: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleDateString('en-GH', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
@@ -118,7 +118,7 @@ const AppointmentsScreen: React.FC = () => {
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleTimeString('en-US', {
+    return date.toLocaleTimeString('en-GH', {
       hour: 'numeric',
       minute: '2-digit',
     });

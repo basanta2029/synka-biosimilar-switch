@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Risk &amp; Technical Debt Inventory - Basanta Baral</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Risk &amp; Technical Debt Inventory - Basanta
+Baral</h1>
+</header>
+<h1 id="risk-technical-debt-inventory">Risk &amp; Technical Debt
+Inventory</h1>
+<h2 id="individual-submission---basanta-baral">Individual Submission -
+Basanta Baral</h2>
+<p><strong>Module:</strong> 1 – Senior Project II Reset: From Prototypes
+to Products<br />
+<strong>Student:</strong> Basanta Baral<br />
+<strong>Team:</strong> Howard University Senior Project Team<br />
+<strong>Date:</strong> February 3, 2026<br />
+<strong>Project:</strong> Synka - Biosimilar Switch Kit MVP<br />
+<strong>Repository:</strong> <a
+href="https://github.com/basanta2029/synka-biosimilar-switch">GitHub -
+Synka MVP</a></p>
+<hr />
+<h2 id="executive-summary">Executive Summary</h2>
+<p>This individual submission documents my contributions to the team’s
+technical debt audit and risk assessment for the Synka MVP codebase. As
+we transition from Senior Project I to Senior Project II, I applied VIBE
+coding principles (Verify, Improve, Build, Execute) to analyze areas of
+the codebase I am responsible for and identify critical issues that must
+be addressed before scaling to production.</p>
+<p>My analysis focuses on <strong>backend security and
+infrastructure</strong>, specifically: - Server-side input validation
+gaps (security vulnerability) - Database provider migration from SQLite
+to PostgreSQL - AI hallucination risks in medical eligibility logic</p>
+<hr />
+<h2 id="part-1-technical-debt-audit">Part 1: Technical Debt Audit</h2>
+<h3 id="my-assigned-technical-debt-items">My Assigned Technical Debt
+Items</h3>
+<p>Based on our team’s code audit, I was assigned responsibility for the
+following technical debt items:</p>
+<hr />
+<h3
+id="debt-item-1-missing-input-validation-and-sanitization-primary">Debt
+Item 1: Missing Input Validation and Sanitization (Primary)</h3>
+<table>
+<colgroup>
+<col style="width: 55%" />
+<col style="width: 45%" />
+</colgroup>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Item Name</strong></td>
+<td>Insufficient Server-Side Input Validation</td>
+</tr>
+<tr>
+<td><strong>Category</strong></td>
+<td>Architectural Debt (Security)</td>
+</tr>
+<tr>
+<td><strong>Severity</strong></td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td><strong>Location</strong></td>
+<td><code>backend/src/controllers/</code>,
+<code>backend/src/middleware/validate.ts</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Description:</strong><br />
+While client-side validation exists via Formik/Yup in our React Native
+app, the backend lacks comprehensive server-side validation. Several
+endpoints accept user input without proper sanitization, creating
+potential security vulnerabilities including XSS attacks and data
+integrity issues. Given that we handle Protected Health Information
+(PHI), this is a critical gap.</p>
+<p><strong>Evidence from Codebase:</strong></p>
+<p>I reviewed the patient controller and found the following
+pattern:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co">// backend/src/controllers/patientController.ts</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> create <span class="op">=</span> <span class="kw">async</span> (req<span class="op">:</span> Request<span class="op">,</span> res<span class="op">:</span> Response) <span class="kw">=&gt;</span> {</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> { name<span class="op">,</span> phone<span class="op">,</span> dateOfBirth } <span class="op">=</span> req<span class="op">.</span><span class="at">body</span><span class="op">;</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  <span class="co">// No sanitization of name field - could contain scripts</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  <span class="co">// No phone format validation on server</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>  <span class="co">// No date format validation</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> patient <span class="op">=</span> <span class="cf">await</span> patientService<span class="op">.</span><span class="fu">create</span>(req<span class="op">.</span><span class="at">body</span>)<span class="op">;</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>  res<span class="op">.</span><span class="fu">status</span>(<span class="dv">201</span>)<span class="op">.</span><span class="fu">json</span>(patient)<span class="op">;</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p><strong>Why This Matters:</strong> - Healthcare applications require
+strict data validation to maintain integrity - Never trust client-side
+validation alone - it can be bypassed - PHI exposure through injection
+attacks would be a HIPAA violation - Malformed data could corrupt the
+database</p>
+<p><strong>Remediation Plan:</strong></p>
+<ol type="1">
+<li><p><strong>Install validation libraries:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install express-validator xss-clean libphonenumber-js</span></code></pre></div></li>
+<li><p><strong>Create validation schemas for each endpoint:</strong></p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// backend/src/validators/patientValidator.ts</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { body<span class="op">,</span> validationResult } <span class="im">from</span> <span class="st">&#39;express-validator&#39;</span><span class="op">;</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> createPatientValidator <span class="op">=</span> [</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">body</span>(<span class="st">&#39;name&#39;</span>)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">trim</span>()</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">isLength</span>({ min<span class="op">:</span> <span class="dv">2</span><span class="op">,</span> max<span class="op">:</span> <span class="dv">100</span> })</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">escape</span>()<span class="op">,</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">body</span>(<span class="st">&#39;phone&#39;</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">isMobilePhone</span>(<span class="st">&#39;any&#39;</span>)<span class="op">,</span></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">body</span>(<span class="st">&#39;dateOfBirth&#39;</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">isISO8601</span>()</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">toDate</span>()<span class="op">,</span></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">body</span>(<span class="st">&#39;diagnosis&#39;</span>)</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="op">.</span><span class="fu">isIn</span>([<span class="st">&#39;RHEUMATOID_ARTHRITIS&#39;</span><span class="op">,</span> <span class="st">&#39;CROHNS_DISEASE&#39;</span><span class="op">,</span> <span class="st">&#39;ULCERATIVE_COLITIS&#39;</span><span class="op">,</span> <span class="st">&#39;PSORIASIS&#39;</span>])<span class="op">,</span></span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>]<span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Implement validation middleware:</strong></p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co">// backend/src/middleware/validate.ts</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> validate <span class="op">=</span> (req<span class="op">:</span> Request<span class="op">,</span> res<span class="op">:</span> Response<span class="op">,</span> next<span class="op">:</span> NextFunction) <span class="kw">=&gt;</span> {</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="kw">const</span> errors <span class="op">=</span> <span class="fu">validationResult</span>(req)<span class="op">;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="op">!</span>errors<span class="op">.</span><span class="fu">isEmpty</span>()) {</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> res<span class="op">.</span><span class="fu">status</span>(<span class="dv">400</span>)<span class="op">.</span><span class="fu">json</span>({ </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>      error<span class="op">:</span> <span class="st">&#39;Validation failed&#39;</span><span class="op">,</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>      details<span class="op">:</span> errors<span class="op">.</span><span class="fu">array</span>() </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    })<span class="op">;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">next</span>()<span class="op">;</span></span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Add rate limiting to prevent abuse:</strong></p>
+<div class="sourceCode" id="cb5"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> rateLimit <span class="im">from</span> <span class="st">&#39;express-rate-limit&#39;</span><span class="op">;</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="im">export</span> <span class="kw">const</span> apiLimiter <span class="op">=</span> <span class="fu">rateLimit</span>({</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  windowMs<span class="op">:</span> <span class="dv">60</span> <span class="op">*</span> <span class="dv">1000</span><span class="op">,</span> <span class="co">// 1 minute</span></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  max<span class="op">:</span> <span class="dv">100</span><span class="op">,</span> <span class="co">// 100 requests per minute</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  message<span class="op">:</span> <span class="st">&#39;Too many requests, please try again later&#39;</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Testing plan:</strong></p>
+<ul>
+<li>Test all endpoints with invalid input types</li>
+<li>Test with XSS payloads in string fields</li>
+<li>Test with oversized request bodies</li>
+<li>Verify proper 400 error responses</li>
+</ul></li>
+</ol>
+<p><strong>Estimated Effort:</strong> 5 story points<br />
+<strong>Priority:</strong> P0 - Critical<br />
+<strong>Sprint Target:</strong> Sprint 7</p>
+<hr />
+<h3 id="debt-item-2-sqlite-in-production-backend-secondary">Debt Item 2:
+SQLite in Production Backend (Secondary)</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Item Name</strong></td>
+<td>Development Database in Production Configuration</td>
+</tr>
+<tr>
+<td><strong>Category</strong></td>
+<td>Architectural Debt</td>
+</tr>
+<tr>
+<td><strong>Severity</strong></td>
+<td>HIGH</td>
+</tr>
+<tr>
+<td><strong>Location</strong></td>
+<td><code>backend/prisma/schema.prisma</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Description:</strong><br />
+The backend currently uses SQLite as its database provider. While SQLite
+was convenient for rapid prototyping during Senior Project I, it has
+significant limitations that make it unsuitable for production:</p>
+<ol type="1">
+<li><strong>No concurrent write support</strong> - Multiple users could
+cause write conflicts</li>
+<li><strong>Limited query capabilities</strong> - Lacks advanced
+features for healthcare analytics</li>
+<li><strong>Not suitable for multi-clinic deployment</strong> - Each
+clinic would need separate instances</li>
+<li><strong>No built-in encryption</strong> - PHI would be stored
+unencrypted</li>
+</ol>
+<p><strong>Evidence from Codebase:</strong></p>
+<pre class="prisma"><code>// backend/prisma/schema.prisma
+datasource db {
+  provider = &quot;sqlite&quot;  // Development-only database
+  url      = env(&quot;DATABASE_URL&quot;)
+}</code></pre>
+<p><strong>Why This Matters:</strong> - Production deployments require a
+robust database - PostgreSQL is the industry standard for healthcare
+applications - Concurrent access from multiple nurses/coordinators
+requires proper ACID compliance - Future analytics features require
+advanced query capabilities</p>
+<p><strong>Remediation Plan:</strong></p>
+<ol type="1">
+<li><p><strong>Set up PostgreSQL development environment:</strong></p>
+<div class="sourceCode" id="cb7"><pre
+class="sourceCode yaml"><code class="sourceCode yaml"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># docker-compose.yml</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="fu">version</span><span class="kw">:</span><span class="at"> </span><span class="st">&#39;3.8&#39;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="fu">services</span><span class="kw">:</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">postgres</span><span class="kw">:</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">image</span><span class="kw">:</span><span class="at"> postgres:15</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">environment</span><span class="kw">:</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">POSTGRES_USER</span><span class="kw">:</span><span class="at"> synka</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">POSTGRES_PASSWORD</span><span class="kw">:</span><span class="at"> synka_dev</span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="fu">POSTGRES_DB</span><span class="kw">:</span><span class="at"> synka_dev</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">ports</span><span class="kw">:</span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> </span><span class="st">&quot;5432:5432&quot;</span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="at">    </span><span class="fu">volumes</span><span class="kw">:</span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="at">      </span><span class="kw">-</span><span class="at"> postgres_data:/var/lib/postgresql/data</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="fu">volumes</span><span class="kw">:</span></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="at">  </span><span class="fu">postgres_data</span><span class="kw">:</span></span></code></pre></div></li>
+<li><p><strong>Update Prisma schema:</strong></p>
+<pre class="prisma"><code>datasource db {
+  provider = &quot;postgresql&quot;
+  url      = env(&quot;DATABASE_URL&quot;)
+}</code></pre></li>
+<li><p><strong>Create environment-specific database URLs:</strong></p>
+<div class="sourceCode" id="cb9"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># .env.development</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a><span class="va">DATABASE_URL</span><span class="op">=</span><span class="st">&quot;postgresql://synka:synka_dev@localhost:5432/synka_dev&quot;</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># .env.production</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="va">DATABASE_URL</span><span class="op">=</span><span class="st">&quot;postgresql://user:password@production-host:5432/synka_prod&quot;</span></span></code></pre></div></li>
+<li><p><strong>Migration steps:</strong></p>
+<div class="sourceCode" id="cb10"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Generate new migration</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> prisma migrate dev <span class="at">--name</span> switch_to_postgres</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Seed development data</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="ex">npx</span> prisma db seed</span></code></pre></div></li>
+<li><p><strong>Deploy to cloud provider:</strong></p>
+<ul>
+<li>Option A: Railway PostgreSQL ($5/month)</li>
+<li>Option B: Render PostgreSQL (free tier available)</li>
+<li>Option C: Supabase (free tier with 500MB)</li>
+</ul></li>
+</ol>
+<p><strong>Estimated Effort:</strong> 5 story points<br />
+<strong>Priority:</strong> P1 - High<br />
+<strong>Sprint Target:</strong> Sprint 7</p>
+<hr />
+<h2 id="part-2-ai-system-risk-assessment">Part 2: AI &amp; System Risk
+Assessment</h2>
+<h3 id="my-assigned-risk-ai-hallucination-in-eligibility-logic">My
+Assigned Risk: AI Hallucination in Eligibility Logic</h3>
+<table>
+<thead>
+<tr>
+<th>Attribute</th>
+<th>Details</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Risk Category</strong></td>
+<td>Reliability/Hallucination</td>
+</tr>
+<tr>
+<td><strong>Severity</strong></td>
+<td>CRITICAL</td>
+</tr>
+<tr>
+<td><strong>Likelihood</strong></td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>Impact</strong></td>
+<td>High - Could recommend unsafe medication switches</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Description:</strong><br />
+As the backend developer, I am responsible for the eligibility checker
+service that determines if a patient can safely switch from a reference
+biologic to a biosimilar. This logic was partially AI-generated during
+our rapid prototyping phase, and there is a significant risk that the AI
+hallucinated drug compatibility rules or missed critical
+contraindications.</p>
+<p>In healthcare applications, incorrect eligibility decisions could
+lead to adverse patient outcomes. This is the most critical risk I
+identified in my area of responsibility.</p>
+<p><strong>Evidence of Risk:</strong></p>
+<p>I reviewed the eligibility logic in our codebase:</p>
+<div class="sourceCode" id="cb11"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">// backend/src/services/switchService.ts (AI-generated)</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> DIAGNOSIS_DRUG_COMPATIBILITY <span class="op">=</span> {</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;RHEUMATOID_ARTHRITIS&#39;</span><span class="op">:</span> [<span class="st">&#39;adalimumab&#39;</span><span class="op">,</span> <span class="st">&#39;infliximab&#39;</span><span class="op">,</span> <span class="st">&#39;etanercept&#39;</span>]<span class="op">,</span></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;CROHNS_DISEASE&#39;</span><span class="op">:</span> [<span class="st">&#39;adalimumab&#39;</span><span class="op">,</span> <span class="st">&#39;infliximab&#39;</span>]<span class="op">,</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;ULCERATIVE_COLITIS&#39;</span><span class="op">:</span> [<span class="st">&#39;adalimumab&#39;</span><span class="op">,</span> <span class="st">&#39;infliximab&#39;</span>]<span class="op">,</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;PSORIASIS&#39;</span><span class="op">:</span> [<span class="st">&#39;adalimumab&#39;</span><span class="op">,</span> <span class="st">&#39;etanercept&#39;</span>]<span class="op">,</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Question: Were these validated against FDA guidelines?</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="co">// No source documentation exists</span></span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> ALLERGY_CONTRAINDICATIONS <span class="op">=</span> {</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;ADALIMUMAB&#39;</span><span class="op">:</span> [<span class="st">&#39;latex&#39;</span><span class="op">,</span> <span class="st">&#39;adalimumab&#39;</span>]<span class="op">,</span></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>  <span class="st">&#39;INFLIXIMAB&#39;</span><span class="op">:</span> [<span class="st">&#39;murine_proteins&#39;</span><span class="op">,</span> <span class="st">&#39;infliximab&#39;</span>]<span class="op">,</span></span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Question: Is this list complete? </span></span>
+<span id="cb11-15"><a href="#cb11-15" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Could AI have missed critical allergies?</span></span>
+<span id="cb11-16"><a href="#cb11-16" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span>
+<span id="cb11-17"><a href="#cb11-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-18"><a href="#cb11-18" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> checkEligibility <span class="op">=</span> (patient<span class="op">:</span> Patient<span class="op">,</span> targetDrug<span class="op">:</span> <span class="dt">string</span>)<span class="op">:</span> EligibilityResult <span class="kw">=&gt;</span> {</span>
+<span id="cb11-19"><a href="#cb11-19" aria-hidden="true" tabindex="-1"></a>  <span class="co">// Complex logic with multiple conditions</span></span>
+<span id="cb11-20"><a href="#cb11-20" aria-hidden="true" tabindex="-1"></a>  <span class="co">// No documentation of business rules source</span></span>
+<span id="cb11-21"><a href="#cb11-21" aria-hidden="true" tabindex="-1"></a>  <span class="co">// No version tracking for rule changes</span></span>
+<span id="cb11-22"><a href="#cb11-22" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div>
+<p><strong>Why This Risk is Critical:</strong> 1. <strong>Patient
+Safety:</strong> Incorrect eligibility could lead to adverse reactions
+2. <strong>Legal Liability:</strong> Medical malpractice if harm occurs
+3. <strong>Trust:</strong> Healthcare providers must trust our
+recommendations 4. <strong>Regulatory:</strong> FDA requires documented
+rationale for medical decisions</p>
+<p><strong>My Mitigation Strategy:</strong></p>
+<ol type="1">
+<li><p><strong>Verification Protocol:</strong> | Step | Action | Status
+| |——|——–|——–| | 1 | Cross-reference drug compatibility with FDA Purple
+Book | Pending | | 2 | Review contraindications with Cigna medical
+advisor | Pending | | 3 | Document source for each medical rule |
+Pending | | 4 | Add version control to eligibility rules | Pending
+|</p></li>
+<li><p><strong>Technical Safeguards I Will Implement:</strong></p>
+<div class="sourceCode" id="cb12"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Add confidence scoring</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="kw">interface</span> EligibilityResult {</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  eligible<span class="op">:</span> <span class="dt">boolean</span><span class="op">;</span></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  confidenceScore<span class="op">:</span> <span class="dt">number</span><span class="op">;</span> <span class="co">// 0-100</span></span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  requiresHumanReview<span class="op">:</span> <span class="dt">boolean</span><span class="op">;</span></span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  ruleVersion<span class="op">:</span> <span class="dt">string</span><span class="op">;</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  sources<span class="op">:</span> <span class="dt">string</span>[]<span class="op">;</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a><span class="co">// Add audit logging</span></span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> logEligibilityDecision <span class="op">=</span> <span class="kw">async</span> (decision<span class="op">:</span> EligibilityResult) <span class="kw">=&gt;</span> {</span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>  <span class="cf">await</span> prisma<span class="op">.</span><span class="at">eligibilityAuditLog</span><span class="op">.</span><span class="fu">create</span>({</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>    data<span class="op">:</span> {</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>      patientId<span class="op">:</span> decision<span class="op">.</span><span class="at">patientId</span><span class="op">,</span></span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>      targetDrug<span class="op">:</span> decision<span class="op">.</span><span class="at">targetDrug</span><span class="op">,</span></span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>      eligible<span class="op">:</span> decision<span class="op">.</span><span class="at">eligible</span><span class="op">,</span></span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>      confidence<span class="op">:</span> decision<span class="op">.</span><span class="at">confidenceScore</span><span class="op">,</span></span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>      ruleVersion<span class="op">:</span> decision<span class="op">.</span><span class="at">ruleVersion</span><span class="op">,</span></span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>      timestamp<span class="op">:</span> <span class="kw">new</span> <span class="bu">Date</span>()<span class="op">,</span></span>
+<span id="cb12-20"><a href="#cb12-20" aria-hidden="true" tabindex="-1"></a>    }</span>
+<span id="cb12-21"><a href="#cb12-21" aria-hidden="true" tabindex="-1"></a>  })<span class="op">;</span></span>
+<span id="cb12-22"><a href="#cb12-22" aria-hidden="true" tabindex="-1"></a>}<span class="op">;</span></span></code></pre></div></li>
+<li><p><strong>Testing Requirements:</strong></p>
+<ul>
+<li>Unit tests for every eligibility rule</li>
+<li>Edge case testing for contraindications</li>
+<li>Negative testing (should reject ineligible patients)</li>
+<li>Medical advisor review of test cases</li>
+</ul></li>
+<li><p><strong>Monitoring Plan:</strong></p>
+<ul>
+<li>Log all eligibility decisions for audit</li>
+<li>Alert on unusual patterns (e.g., &gt;50% rejections)</li>
+<li>Weekly review of declined switches</li>
+</ul></li>
+</ol>
+<p><strong>Owner:</strong> Basanta Baral<br />
+<strong>Review Frequency:</strong> Weekly during Sprint 7</p>
+<hr />
+<h2 id="part-3-backlog-integration">Part 3: Backlog Integration</h2>
+<h3 id="github-issues-i-created">GitHub Issues I Created</h3>
+<p>I converted my assigned technical debt items to GitHub Issues with
+AI-refined acceptance criteria:</p>
+<h4 id="issue-46-tech-debt-server-side-input-validation">Issue #46:
+[TECH-DEBT] Server-Side Input Validation</h4>
+<div class="sourceCode" id="cb13"><pre
+class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>**Type:** Technical Debt</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>**Labels:** technical-debt, security, priority-critical</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>**Assignee:** Basanta Baral</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>**Sprint:** Sprint 7</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>**Story Points:** 5</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="fu">## Description</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>Server-side input validation is incomplete, creating security vulnerabilities for our </span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>healthcare application. This must be fixed before any pilot deployment.</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a><span class="fu">## Acceptance Criteria (AI-Refined)</span></span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> express-validator installed and configured</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Validation schema for POST /api/v1/patients</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Validation schema for POST /api/v1/switches</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Validation schema for POST /api/v1/follow-ups</span>
+<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Validation schema for POST /api/v1/appointments</span>
+<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Input sanitization middleware using xss-clean</span>
+<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Phone number validation using libphonenumber-js</span>
+<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Rate limiting middleware (100 req/min per IP)</span>
+<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Request body size limits (1MB max)</span>
+<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Validation errors return proper 400 responses with details</span>
+<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> All endpoints tested with invalid inputs (unit tests)</span>
+<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Security review completed by team lead</span>
+<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a><span class="fu">## Technical Approach</span></span>
+<span id="cb13-26"><a href="#cb13-26" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Create /backend/src/validators/ directory for validation schemas</span>
+<span id="cb13-27"><a href="#cb13-27" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Create reusable validation middleware in /backend/src/middleware/validate.ts</span>
+<span id="cb13-28"><a href="#cb13-28" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Reference existing Formik/Yup schemas from mobile app for consistency</span>
+<span id="cb13-29"><a href="#cb13-29" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Log validation failures for security monitoring</span>
+<span id="cb13-30"><a href="#cb13-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-31"><a href="#cb13-31" aria-hidden="true" tabindex="-1"></a><span class="fu">## Definition of Done</span></span>
+<span id="cb13-32"><a href="#cb13-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> All acceptance criteria met</span>
+<span id="cb13-33"><a href="#cb13-33" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> PR approved by Cameron Carter (Tech Lead)</span>
+<span id="cb13-34"><a href="#cb13-34" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Tests pass in CI/CD</span>
+<span id="cb13-35"><a href="#cb13-35" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Documentation updated in API docs</span></code></pre></div>
+<h4 id="issue-47-tech-debt-migrate-to-postgresql">Issue #47: [TECH-DEBT]
+Migrate to PostgreSQL</h4>
+<div class="sourceCode" id="cb14"><pre
+class="sourceCode markdown"><code class="sourceCode markdown"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>**Type:** Technical Debt</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>**Labels:** technical-debt, database, priority-high</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>**Assignee:** Basanta Baral</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>**Sprint:** Sprint 7</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>**Story Points:** 5</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a><span class="fu">## Description</span></span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>Backend uses SQLite which is unsuitable for production deployment. Must migrate to </span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a>PostgreSQL before pilot.</span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="fu">## Acceptance Criteria (AI-Refined)</span></span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Docker Compose file with PostgreSQL 15 configuration</span>
+<span id="cb14-13"><a href="#cb14-13" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Prisma schema updated with provider = &quot;postgresql&quot;</span>
+<span id="cb14-14"><a href="#cb14-14" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> All migrations tested successfully on PostgreSQL</span>
+<span id="cb14-15"><a href="#cb14-15" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Seed scripts work with PostgreSQL</span>
+<span id="cb14-16"><a href="#cb14-16" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> PostgreSQL deployed on Railway or Render for staging</span>
+<span id="cb14-17"><a href="#cb14-17" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Environment variables configured (.env.development, .env.staging, .env.production)</span>
+<span id="cb14-18"><a href="#cb14-18" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Data migration script created for any existing dev data</span>
+<span id="cb14-19"><a href="#cb14-19" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Backup procedures documented</span>
+<span id="cb14-20"><a href="#cb14-20" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Connection pooling configured (PgBouncer or built-in)</span>
+<span id="cb14-21"><a href="#cb14-21" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Database indexes reviewed and optimized</span>
+<span id="cb14-22"><a href="#cb14-22" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-23"><a href="#cb14-23" aria-hidden="true" tabindex="-1"></a><span class="fu">## Technical Approach</span></span>
+<span id="cb14-24"><a href="#cb14-24" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>Create docker-compose.yml for local PostgreSQL</span>
+<span id="cb14-25"><a href="#cb14-25" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>Update prisma/schema.prisma provider</span>
+<span id="cb14-26"><a href="#cb14-26" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>Run prisma migrate dev to generate PostgreSQL migrations</span>
+<span id="cb14-27"><a href="#cb14-27" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>Update seeding scripts if needed</span>
+<span id="cb14-28"><a href="#cb14-28" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>Deploy to Railway free tier for staging</span>
+<span id="cb14-29"><a href="#cb14-29" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>Document setup in README.md</span>
+<span id="cb14-30"><a href="#cb14-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-31"><a href="#cb14-31" aria-hidden="true" tabindex="-1"></a><span class="fu">## Definition of Done</span></span>
+<span id="cb14-32"><a href="#cb14-32" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> All acceptance criteria met</span>
+<span id="cb14-33"><a href="#cb14-33" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Backend tests pass with PostgreSQL</span>
+<span id="cb14-34"><a href="#cb14-34" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Staging environment uses PostgreSQL</span>
+<span id="cb14-35"><a href="#cb14-35" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> Team can run locally with docker-compose up</span>
+<span id="cb14-36"><a href="#cb14-36" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span><span class="va">[ ]</span> README updated with PostgreSQL setup instructions</span></code></pre></div>
+<hr />
+<h2 id="vibe-coding-verification">VIBE Coding Verification</h2>
+<p>I applied the VIBE (Verify, Improve, Build, Execute) framework in my
+analysis:</p>
+<table>
+<colgroup>
+<col style="width: 30%" />
+<col style="width: 69%" />
+</colgroup>
+<thead>
+<tr>
+<th>Phase</th>
+<th>My Application</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Verify</strong></td>
+<td>Reviewed backend codebase to identify validation gaps and database
+limitations. Cross-referenced with HIPAA requirements and production
+best practices.</td>
+</tr>
+<tr>
+<td><strong>Improve</strong></td>
+<td>Created detailed remediation plans with specific code examples and
+steps. Identified root causes, not just symptoms.</td>
+</tr>
+<tr>
+<td><strong>Build</strong></td>
+<td>Converted debt items to GitHub Issues with AI-refined acceptance
+criteria. Created actionable, measurable tasks.</td>
+</tr>
+<tr>
+<td><strong>Execute</strong></td>
+<td>Prioritized items for Sprint 7. Committed to weekly progress
+reviews. Established clear definition of done.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="summary-my-contributions">Summary: My Contributions</h2>
+<table>
+<colgroup>
+<col style="width: 15%" />
+<col style="width: 15%" />
+<col style="width: 25%" />
+<col style="width: 23%" />
+<col style="width: 20%" />
+</colgroup>
+<thead>
+<tr>
+<th>Item</th>
+<th>Type</th>
+<th>Severity</th>
+<th>My Role</th>
+<th>Sprint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server-Side Input Validation</td>
+<td>Technical Debt</td>
+<td>Critical</td>
+<td>Primary Owner</td>
+<td>Sprint 7</td>
+</tr>
+<tr>
+<td>PostgreSQL Migration</td>
+<td>Technical Debt</td>
+<td>High</td>
+<td>Primary Owner</td>
+<td>Sprint 7</td>
+</tr>
+<tr>
+<td>AI Hallucination in Eligibility Logic</td>
+<td>Risk</td>
+<td>Critical</td>
+<td>Risk Owner</td>
+<td>Sprint 7</td>
+</tr>
+</tbody>
+</table>
+<h3 id="my-commitments-for-sprint-7">My Commitments for Sprint 7:</h3>
+<ol type="1">
+<li><strong>Week 1:</strong> Implement input validation for all backend
+endpoints</li>
+<li><strong>Week 1:</strong> Set up PostgreSQL with Docker Compose
+locally</li>
+<li><strong>Week 2:</strong> Complete database migration and update seed
+scripts</li>
+<li><strong>Week 2:</strong> Add unit tests for eligibility logic with
+medical review</li>
+<li><strong>Ongoing:</strong> Document all eligibility rules with FDA
+sources</li>
+</ol>
+<hr />
+<p><strong>Submitted By:</strong> Basanta Baral<br />
+<strong>Date:</strong> February 3, 2026<br />
+<strong>Course:</strong> Senior Project II<br />
+<strong>Module:</strong> 1 – From Prototypes to Products</p>
+<hr />
+<p><em>This individual submission demonstrates my application of VIBE
+coding principles to analyze and address technical debt and AI-related
+risks in my areas of responsibility.</em></p>
+</body>
+</html>

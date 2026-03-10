@@ -11,10 +11,9 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { usePatients, useSyncStatus } from '../../hooks/usePatients';
-import { syncService } from '../../services/syncService';
 import { Patient } from '../../types';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, DIAGNOSES, ALLERGIES } from '../../constants';
-import { formatDate, calculateAge } from '../../utils/date';
+import { calculateAge } from '../../utils/date';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, 'PatientList'>;
@@ -26,11 +25,7 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
   const { patients, isLoading, isOnline, refetch } = usePatients(debouncedSearch);
   const { queueCount, isSyncing } = useSyncStatus();
 
-  // Start auto sync on mount
-  useEffect(() => {
-    syncService.startAutoSync();
-    return () => syncService.stopAutoSync();
-  }, []);
+  // Note: Auto-sync is started globally in App.tsx, no need to start/stop here
 
   // Debounce search
   useEffect(() => {

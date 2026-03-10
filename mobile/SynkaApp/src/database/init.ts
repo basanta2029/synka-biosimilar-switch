@@ -211,6 +211,16 @@ const createTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
       );
     `);
 
+    // Deleted Patients tracking table
+    // Prevents server sync from restoring deleted patients
+    await db.executeSql(`
+      CREATE TABLE IF NOT EXISTS deleted_patients (
+        id TEXT PRIMARY KEY,
+        deletedAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        syncedDeletion INTEGER DEFAULT 0
+      );
+    `);
+
     console.log('All tables created successfully');
   } catch (error) {
     console.error('Error creating tables:', error);
@@ -226,6 +236,7 @@ export const clearAllData = async (): Promise<void> => {
 
   try {
     await db.executeSql('DELETE FROM sync_queue');
+    await db.executeSql('DELETE FROM deleted_patients');
     await db.executeSql('DELETE FROM sms_logs');
     await db.executeSql('DELETE FROM follow_ups');
     await db.executeSql('DELETE FROM appointments');

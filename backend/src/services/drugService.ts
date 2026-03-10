@@ -65,7 +65,9 @@ export class DrugService {
         approvedForSwitch: true,
       },
       orderBy: [
-        { interchangeability: 'desc' }, // Interchangeable first
+        // Biosimilars with stronger interchangeability data from strict NRAs first,
+        // then lowest cost options. Ghana FDA still requires a prescriber decision.
+        { interchangeability: 'desc' },
         { costPerMonth: 'asc' },
       ],
     });
@@ -93,8 +95,9 @@ export class DrugService {
   }
 
   /**
-   * Seed database with FDA Purple Book approved drugs
-   * Data sourced from: https://purplebooksearch.fda.gov/
+   * Seed database with example reference and biosimilar drugs
+   * Demo data based on international sources (e.g., US FDA Purple Book)
+   * and intended only for development, not for real clinical deployment.
    */
   async seedDrugs() {
     // First, clear existing drugs to avoid duplicates
@@ -104,7 +107,7 @@ export class DrugService {
     // REFERENCE PRODUCTS (BRAND DRUGS)
     // ========================================
     const brandDrugs = [
-      // Adalimumab - Anti-TNF
+      // Adalimumab - Anti-TNF (reference product example)
       {
         name: 'Humira',
         type: 'BRAND' as DrugType,
@@ -120,7 +123,7 @@ export class DrugService {
         indications: 'Rheumatoid Arthritis, Juvenile Idiopathic Arthritis, Psoriatic Arthritis, Ankylosing Spondylitis, Crohn\'s Disease, Ulcerative Colitis, Plaque Psoriasis, Hidradenitis Suppurativa, Uveitis',
         administrationRoute: 'Subcutaneous injection',
       },
-      // Infliximab - Anti-TNF
+      // Infliximab - Anti-TNF (reference product example)
       {
         name: 'Remicade',
         type: 'BRAND' as DrugType,
@@ -136,7 +139,7 @@ export class DrugService {
         indications: 'Crohn\'s Disease, Ulcerative Colitis, Rheumatoid Arthritis, Ankylosing Spondylitis, Psoriatic Arthritis, Plaque Psoriasis',
         administrationRoute: 'Intravenous infusion',
       },
-      // Etanercept - Anti-TNF
+      // Etanercept - Anti-TNF (reference product example)
       {
         name: 'Enbrel',
         type: 'BRAND' as DrugType,
@@ -152,7 +155,7 @@ export class DrugService {
         indications: 'Rheumatoid Arthritis, Polyarticular Juvenile Idiopathic Arthritis, Psoriatic Arthritis, Ankylosing Spondylitis, Plaque Psoriasis',
         administrationRoute: 'Subcutaneous injection',
       },
-      // Trastuzumab - HER2
+      // Trastuzumab - HER2 (reference product example)
       {
         name: 'Herceptin',
         type: 'BRAND' as DrugType,
@@ -168,7 +171,7 @@ export class DrugService {
         indications: 'HER2-Overexpressing Breast Cancer, HER2-Overexpressing Metastatic Gastric or Gastroesophageal Junction Adenocarcinoma',
         administrationRoute: 'Intravenous infusion',
       },
-      // Filgrastim - G-CSF
+      // Filgrastim - G-CSF (reference product example)
       {
         name: 'Neupogen',
         type: 'BRAND' as DrugType,
@@ -194,10 +197,10 @@ export class DrugService {
     }
 
     // ========================================
-    // BIOSIMILARS - FDA Purple Book Approved
+    // BIOSIMILARS - EXAMPLE DATA FROM STRICT NRAs
     // ========================================
     const biosimilars = [
-      // ---- ADALIMUMAB (Humira) Biosimilars ----
+      // ---- ADALIMUMAB (Humira) Biosimilars (examples) ----
       {
         name: 'Amjevita',
         type: 'BIOSIMILAR' as DrugType,
@@ -205,7 +208,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Amgen Inc.',
-        description: 'First FDA-approved adalimumab biosimilar. Interchangeable with Humira.',
+        description: 'Example adalimumab biosimilar with interchangeability designation in a strict NRA.',
         activeIngredient: 'adalimumab-atto',
         fdaSuffix: '-atto',
         blaNumber: 'BLA 761024',
@@ -222,7 +225,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Boehringer Ingelheim',
-        description: 'First interchangeable adalimumab biosimilar approved by FDA.',
+        description: 'Example adalimumab biosimilar with interchangeability designation in a strict NRA.',
         activeIngredient: 'adalimumab-adbm',
         fdaSuffix: '-adbm',
         blaNumber: 'BLA 761058',
@@ -239,7 +242,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Samsung Bioepis / Organon',
-        description: 'Citrate-free adalimumab biosimilar with interchangeability designation.',
+        description: 'Citrate-free adalimumab biosimilar with interchangeability designation in a strict NRA.',
         activeIngredient: 'adalimumab-bwwd',
         fdaSuffix: '-bwwd',
         blaNumber: 'BLA 761059',
@@ -256,7 +259,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Sandoz Inc.',
-        description: 'Interchangeable adalimumab biosimilar from Sandoz.',
+        description: 'Adalimumab biosimilar from Sandoz with interchangeability designation in a strict NRA.',
         activeIngredient: 'adalimumab-adaz',
         fdaSuffix: '-adaz',
         blaNumber: 'BLA 761071',
@@ -273,7 +276,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Celltrion USA, Inc.',
-        description: 'High-concentration, citrate-free adalimumab biosimilar.',
+        description: 'High-concentration, citrate-free adalimumab biosimilar example.',
         activeIngredient: 'adalimumab-aaty',
         fdaSuffix: '-aaty',
         blaNumber: 'BLA 761182',
@@ -284,7 +287,7 @@ export class DrugService {
         administrationRoute: 'Subcutaneous injection',
       },
 
-      // ---- INFLIXIMAB (Remicade) Biosimilars ----
+      // ---- INFLIXIMAB (Remicade) Biosimilars (examples) ----
       {
         name: 'Inflectra',
         type: 'BIOSIMILAR' as DrugType,
@@ -292,7 +295,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Celltrion / Pfizer',
-        description: 'First FDA-approved infliximab biosimilar.',
+        description: 'First infliximab biosimilar approved by a strict NRA.',
         activeIngredient: 'infliximab-dyyb',
         fdaSuffix: '-dyyb',
         blaNumber: 'BLA 125544',
@@ -309,7 +312,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'TNF-Blocker',
         manufacturer: 'Samsung Bioepis',
-        description: 'Infliximab biosimilar approved for all reference indications.',
+        description: 'Infliximab biosimilar approved for all reference indications by a strict NRA.',
         activeIngredient: 'infliximab-abda',
         fdaSuffix: '-abda',
         blaNumber: 'BLA 761054',
@@ -337,7 +340,7 @@ export class DrugService {
         administrationRoute: 'Intravenous infusion',
       },
 
-      // ---- TRASTUZUMAB (Herceptin) Biosimilars ----
+      // ---- TRASTUZUMAB (Herceptin) Biosimilars (examples) ----
       {
         name: 'Ogivri',
         type: 'BIOSIMILAR' as DrugType,
@@ -345,7 +348,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'HER2-Blocker',
         manufacturer: 'Mylan / Viatris',
-        description: 'First FDA-approved trastuzumab biosimilar for HER2-positive cancers.',
+        description: 'First trastuzumab biosimilar for HER2-positive cancers approved by a strict NRA.',
         activeIngredient: 'trastuzumab-dkst',
         fdaSuffix: '-dkst',
         blaNumber: 'BLA 761074',
@@ -379,7 +382,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'HER2-Blocker',
         manufacturer: 'Amgen Inc.',
-        description: 'Trastuzumab biosimilar approved based on comprehensive comparative data.',
+        description: 'Trastuzumab biosimilar approved based on comprehensive comparative data in a strict NRA.',
         activeIngredient: 'trastuzumab-anns',
         fdaSuffix: '-anns',
         blaNumber: 'BLA 761073',
@@ -390,7 +393,7 @@ export class DrugService {
         administrationRoute: 'Intravenous infusion',
       },
 
-      // ---- FILGRASTIM (Neupogen) Biosimilars ----
+      // ---- FILGRASTIM (Neupogen) Biosimilars (examples) ----
       {
         name: 'Zarxio',
         type: 'BIOSIMILAR' as DrugType,
@@ -398,7 +401,7 @@ export class DrugService {
         approvedForSwitch: true,
         therapeuticClass: 'G-CSF',
         manufacturer: 'Sandoz Inc.',
-        description: 'First FDA-approved biosimilar in the United States (March 2015).',
+        description: 'First filgrastim biosimilar approved by a strict NRA (March 2015).',
         activeIngredient: 'filgrastim-sndz',
         fdaSuffix: '-sndz',
         blaNumber: 'BLA 125553',
@@ -437,7 +440,7 @@ export class DrugService {
     const allDrugs = [...Object.values(createdBrands), ...createdBiosimilars];
 
     return {
-      message: 'FDA Purple Book drugs seeded successfully',
+      message: 'Example reference and biosimilar drugs seeded successfully (demo data only)',
       count: allDrugs.length,
       summary: {
         referenceProducts: Object.keys(createdBrands).length,

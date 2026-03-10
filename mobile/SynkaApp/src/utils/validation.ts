@@ -48,8 +48,9 @@ export const patientSchema = Yup.object().shape({
   language: Yup.string()
     .required('Language is required')
     .oneOf(['EN', 'ES'], 'Invalid language'),
-  allergies: Yup.string()
-    .max(500, 'Allergies must be less than 500 characters')
+  diagnosis: Yup.string().optional(),
+  allergies: Yup.array()
+    .of(Yup.string())
     .optional(),
 });
 

@@ -8,6 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import { useFocusEffect } from '@react-navigation/native';
 import { switchesApi } from '../../api/switches';
 import { patientsApi } from '../../api/patients';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
@@ -46,9 +47,12 @@ const DashboardScreen: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  // Reload data every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -56,9 +60,9 @@ const DashboardScreen: React.FC = () => {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GH', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'GHS',
       maximumFractionDigits: 0,
     }).format(amount);
   };

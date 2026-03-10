@@ -39,19 +39,20 @@ const ProfileScreen = () => {
         console.log(`Re-queued ${requeueCount} orphaned patients`);
       }
 
-      // Now sync all
+      // Now sync all (this will process the newly queued items)
       const result = await syncService.syncAll();
-      if (result.success > 0 || result.failed > 0) {
-        Alert.alert(
-          'Sync Complete',
-          `Synced: ${result.success}\nFailed: ${result.failed}`
-        );
-      } else if (requeueCount > 0) {
-        // If we re-queued but nothing synced, there might be an error
-        Alert.alert('Sync Issue', `Found ${requeueCount} unsynced items but sync failed. Check your connection.`);
+
+      // Show appropriate message based on results
+      if (result.success > 0 && result.failed === 0) {
+        Alert.alert('Sync Complete', `Successfully synced ${result.success} item${result.success > 1 ? 's' : ''}`);
+      } else if (result.success > 0 && result.failed > 0) {
+        Alert.alert('Sync Partial', `Synced: ${result.success}\nFailed: ${result.failed}`);
+      } else if (result.failed > 0) {
+        Alert.alert('Sync Failed', `${result.failed} item${result.failed > 1 ? 's' : ''} failed to sync. Please try again.`);
       } else {
-        Alert.alert('Sync Complete', 'All data is synced');
+        Alert.alert('Sync Complete', 'All data is already synced');
       }
+
       // Refresh queries after sync
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (error) {

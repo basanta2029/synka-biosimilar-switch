@@ -3,11 +3,12 @@
  * Mobile Application
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StatusBar, LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import NetInfo from '@react-native-community/netinfo';
 import { RootNavigator } from './src/navigation';
 import { initDatabase } from './src/database';
 import { syncService } from './src/services/syncService';
@@ -39,6 +40,7 @@ const queryClient = new QueryClient({
 
 function App() {
   const { loadLanguage } = useLanguageStore();
+  const wasOffline = useRef(false);
 
   useEffect(() => {
     // Initialize app
@@ -55,6 +57,17 @@ function App() {
         // Start automatic background sync
         syncService.startAutoSync();
         console.log('Auto-sync service started');
+
+        // Run initial sync check after app starts (in case there are pending items from previous session)
+        const netState = await NetInfo.fetch();
+        if (netState.isConnected) {
+          console.log('Running initial sync check on app start...');
+          await syncService.requeueUnsyncedPatients();
+          await syncService.syncAll();
+        } else {
+          // Mark that we're starting offline
+          wasOffline.current = true;
+        }
       } catch (error) {
         console.error('Failed to initialize app:', error);
       }
@@ -62,9 +75,25 @@ function App() {
 
     initializeApp();
 
-    // Cleanup: Stop auto-sync when app unmounts
+    // Listen for network state changes to sync immediately when coming online
+    const unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+      const isConnected = state.isConnected ?? false;
+
+      if (isConnected && wasOffline.current) {
+        console.log('Network restored - triggering immediate sync');
+        // Re-queue any orphaned unsynced items and sync
+        syncService.requeueUnsyncedPatients().then(() => {
+          syncService.syncAll();
+        });
+      }
+
+      wasOffline.current = !isConnected;
+    });
+
+    // Cleanup: Stop auto-sync and remove network listener when app unmounts
     return () => {
       syncService.stopAutoSync();
+      unsubscribeNetInfo();
     };
   }, [loadLanguage]);
 

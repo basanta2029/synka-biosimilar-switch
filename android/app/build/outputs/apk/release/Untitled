@@ -1,0 +1,41 @@
+Objective
+Establish a clear, shared understanding of your project’s current technical state and readiness for Senior Project II.
+
+Tasks
+Review your Lovable.dev–generated codebase
+
+Document current system architecture (components, data flow, dependencies)
+
+Identify technical debt, risks, and unknowns
+
+Audit GitHub Project Board for backlog quality and completeness
+
+Deliverables
+Project Reset Report (PDF or Markdown) including:
+
+Architecture diagram
+
+Risk & technical debt list
+
+Backlog health assessment
+
+Initial Senior Project II priorities
+
+Submission Type
+File Upload - PDF
+
+Rubric (10 pts)
+Architecture Diagram Quality (2 pts)
+Clear components, readable labels, meaningful relationships
+
+Architecture Explanation (2 pts)
+Accurate summary of how the system works end-to-end
+
+Technical Debt & Risk Identification (2 pts)
+Realistic risks + severity + impact
+
+Backlog Health & Readiness (2 pts)
+Evidence of review + improvement recommendations
+
+Professional Quality & Completeness (2 pts)
+Organized, polished, complete, easy to follow

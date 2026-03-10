@@ -75,7 +75,7 @@ export class DrugController {
 
   /**
    * POST /api/v1/drugs/seed
-   * Seed database with FDA Purple Book drugs
+   * Seed database with example reference and biosimilar drugs (development only)
    */
   async seedDrugs(req: Request, res: Response, next: NextFunction) {
     try {
@@ -102,7 +102,8 @@ export class DrugController {
 
   /**
    * GET /api/v1/drugs/interchangeable
-   * Get all interchangeable biosimilars (can be substituted at pharmacy level)
+   * Get all biosimilars marked as interchangeable by at least one strict NRA
+   * (for clinic decision-making; does NOT imply automatic substitution under Ghana FDA)
    */
   async getInterchangeableBiosimilars(_req: Request, res: Response, next: NextFunction) {
     try {
@@ -110,7 +111,8 @@ export class DrugController {
       res.json({
         drugs,
         count: drugs.length,
-        description: 'FDA-approved interchangeable biosimilars that can be substituted at the pharmacy without prescriber consultation'
+        description:
+          'Biosimilars with interchangeability designations from strict NRAs; Ghana FDA still requires prescriber involvement for any switch.'
       });
     } catch (error) {
       next(error);

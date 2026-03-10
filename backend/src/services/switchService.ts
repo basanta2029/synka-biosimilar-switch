@@ -184,19 +184,25 @@ export class SwitchService {
       }
     }
 
-    // Check for interchangeable biosimilars (preferred for pharmacy-level substitution)
+    // Check for biosimilars designated interchangeable by a reference NRA
     const interchangeableBiosimilars = biosimilars.filter(
       (b: any) => b.interchangeability === 'INTERCHANGEABLE'
     );
 
     if (interchangeableBiosimilars.length > 0) {
-      reasons.push(`${interchangeableBiosimilars.length} FDA-designated interchangeable biosimilar(s) available - can be substituted at pharmacy without prescriber intervention`);
+      reasons.push(
+        `${interchangeableBiosimilars.length} biosimilar option(s) have strong interchangeability data from at least one strict regulator; ` +
+        `under Ghana FDA guidelines, switching still requires a prescriber decision and is not automatic at the pharmacy level.`
+      );
     }
 
     // Add cost savings info
     if (biosimilars.length > 0) {
       const bestSavings = biosimilars[0]; // Already sorted by savings
-      reasons.push(`Potential savings: up to $${bestSavings.annualSavings.toLocaleString()}/year (${bestSavings.savingsPercent}% reduction)`);
+      reasons.push(
+        `Potential savings: up to GHS ${bestSavings.annualSavings.toLocaleString()}/year ` +
+        `(${bestSavings.savingsPercent}% reduction, estimated based on clinic pricing).`
+      );
     }
 
     return {
