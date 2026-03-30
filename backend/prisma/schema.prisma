@@ -48,7 +48,9 @@ enum AppointmentStatus {
   SCHEDULED
   COMPLETED
   MISSED
+  NO_SHOW
   RESCHEDULED
+  CANCELLED
 }
 
 enum Severity {
@@ -202,6 +204,8 @@ model SmsLog {
   phoneNumber     String
   message         String
   language        Language
+  templateId      String?
+  scheduledFor    DateTime?
   sentAt          DateTime?
   deliveryStatus  SmsStatus      @default(PENDING)
   twilioSid       String?
@@ -228,4 +232,19 @@ model Alert {
   @@index([reviewed])
   @@index([createdAt])
   @@map("alerts")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

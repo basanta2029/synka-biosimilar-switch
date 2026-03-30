@@ -4,7 +4,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { patientsApi } from '../api/patients';
 import { patientsDb } from '../database';
 import { syncService } from '../services/syncService';
-import { Patient, PatientFormData } from '../types';
+import { PatientFormData } from '../types';
 
 /**
  * Hook for fetching patients with offline support
@@ -33,20 +33,14 @@ export const usePatients = (searchQuery?: string) => {
   });
 
   // Fetch from API (only when online)
-  const {
-    data: apiData,
-    isLoading: isLoadingApi,
-    error: apiError,
-  } = useQuery({
+  const { error: apiError } = useQuery({
     queryKey: ['patients', 'api', searchQuery],
     queryFn: async () => {
       const response = await patientsApi.getPatients({ search: searchQuery });
 
       // Save API data to local DB (mark as synced)
-      // Use response.data as defined in PaginatedResponse type
-      if (response?.data && response.data.length > 0) {
-        // Only upsert patients that are not pending deletion locally
-        await patientsDb.batchUpsertFromServer(response.data);
+      if (response.patients?.length) {
+        await patientsDb.batchUpsertFromServer(response.patients);
         // Refetch local data to show updated patients
         queryClient.invalidateQueries({ queryKey: ['patients', 'local'] });
       }
@@ -90,7 +84,7 @@ export const usePatient = (patientId: string) => {
   });
 
   // Fetch from API (only when online)
-  const { data: apiData, isLoading: isLoadingApi } = useQuery({
+  useQuery({
     queryKey: ['patient', patientId, 'api'],
     queryFn: async () => {
       const response = await patientsApi.getPatient(patientId);
@@ -130,7 +124,8 @@ export const useCreatePatient = () => {
         phone: data.phone,
         dateOfBirth: data.dateOfBirth.toISOString(),
         language: data.language,
-        allergies: data.allergies,
+        diagnosis: data.diagnosis,
+        allergies: data.allergies?.join(',') || '',
       };
 
       // Try to create on server first (if online)
@@ -177,7 +172,8 @@ export const useUpdatePatient = () => {
       if (data.phone) updates.phone = data.phone;
       if (data.dateOfBirth) updates.dateOfBirth = data.dateOfBirth.toISOString();
       if (data.language) updates.language = data.language;
-      if (data.allergies !== undefined) updates.allergies = data.allergies;
+      if (data.diagnosis !== undefined) updates.diagnosis = data.diagnosis;
+      if (data.allergies !== undefined) updates.allergies = data.allergies?.join(',') || '';
 
       // Update in local DB
       await patientsDb.update(id, updates);

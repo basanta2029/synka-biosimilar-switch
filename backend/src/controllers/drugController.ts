@@ -118,6 +118,19 @@ export class DrugController {
       next(error);
     }
   }
+
+  /**
+   * GET /api/v1/drugs/nhis/coverage-report
+   * Returns prototype NHIS mapping metadata used by biosimilar eligibility.
+   */
+  async getNhisCoverageReport(_req: Request, res: Response, next: NextFunction) {
+    try {
+      const report = drugService.getNhisCoverageReport();
+      res.json(report);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const drugController = new DrugController();

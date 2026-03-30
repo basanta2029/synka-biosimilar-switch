@@ -11,8 +11,10 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, SEVERITY } from '../../constants';
+import NetInfo from '@react-native-community/netinfo';
+import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 import { switchesApi, FollowUpRequest } from '../../api/switches';
+import { syncService } from '../../services/syncService';
 
 interface Appointment {
   id: string;
@@ -101,15 +103,30 @@ const FollowUpFormModal: React.FC<FollowUpFormModalProps> = ({
         data.notes = notes.trim();
       }
 
-      await switchesApi.recordFollowUp(appointment.id, data);
+      const netState = await NetInfo.fetch();
+
+      if (netState.isConnected) {
+        try {
+          await switchesApi.recordFollowUp(appointment.id, data);
+        } catch (error) {
+          // If the online call fails (e.g., transient network/backend issue), fall back to offline queue
+          console.warn('Online follow-up failed, queuing for sync:', error);
+          await syncService.queueFollowUpCreate(appointment.id, data);
+        }
+      } else {
+        await syncService.queueFollowUpCreate(appointment.id, data);
+      }
 
       Alert.alert(
         'Success',
         'Follow-up has been recorded successfully',
-        [{ text: 'OK', onPress: () => {
-          resetForm();
-          onSuccess();
-        }}]
+        [{
+          text: 'OK',
+          onPress: () => {
+            resetForm();
+            onSuccess();
+          }
+        }]
       );
     } catch (error: any) {
       console.error('Error recording follow-up:', error);

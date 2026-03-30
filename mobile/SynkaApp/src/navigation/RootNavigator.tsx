@@ -25,7 +25,7 @@ const RootNavigator = () => {
   useEffect(() => {
     // Load user from storage on app start
     loadUserFromStorage();
-  }, []);
+  }, [loadUserFromStorage]);
 
   if (isLoading) {
     return (

@@ -6,10 +6,11 @@ export class PatientService {
    * Get all patients with optional search
    */
   async getPatients(searchQuery?: string, limit: number = 20, offset: number = 0) {
+    // SQLite (Prisma) does not support `mode: 'insensitive'` on string filters; it throws at runtime.
     const where = searchQuery
       ? {
           OR: [
-            { name: { contains: searchQuery, mode: 'insensitive' as const } },
+            { name: { contains: searchQuery } },
             { phone: { contains: searchQuery } },
           ],
         }
@@ -76,6 +77,7 @@ export class PatientService {
     phone: string;
     dateOfBirth: Date;
     language: 'EN' | 'ES';
+    diagnosis?: string;
     allergies?: string;
   }) {
     // Check if phone already exists

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
 import { switchesApi } from '../../api/switches';
-import { patientsApi } from '../../api/patients';
+import { patientsDb } from '../../database';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 
 interface DashboardStats {
@@ -35,10 +35,10 @@ const DashboardScreen: React.FC = () => {
     try {
       const [dashboardStats, patientsResponse] = await Promise.all([
         switchesApi.getDashboardStats(),
-        patientsApi.getPatients({}),
+        patientsDb.getAll(),
       ]);
       setStats(dashboardStats);
-      setPatientCount(patientsResponse.total || patientsResponse.patients?.length || 0);
+      setPatientCount(patientsResponse.length || 0);
     } catch (error) {
       console.log('Error loading dashboard:', error);
     } finally {
@@ -154,7 +154,7 @@ const DashboardScreen: React.FC = () => {
             <Icon name="calendar" size={20} color={COLORS.warning} />
           </View>
           <Text style={styles.statValue}>{stats?.upcomingAppointments || 0}</Text>
-          <Text style={styles.statLabel}>Upcoming</Text>
+          <Text style={styles.statLabel}>Upcoming Follow-up Patients</Text>
         </View>
       </View>
 

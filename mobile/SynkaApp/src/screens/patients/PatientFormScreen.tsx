@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,13 @@ import {
   Alert,
   TouchableOpacity,
   Modal,
-  FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Formik } from 'formik';
 import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Feather';
-import { useCreatePatient, useUpdatePatient } from '../../hooks/usePatients';
+import { useCreatePatient, usePatient, useUpdatePatient } from '../../hooks/usePatients';
 import { Button, Input } from '../../components/common';
 import { patientSchema } from '../../utils/validation';
 import {
@@ -36,6 +36,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
   const { t, i18n } = useTranslation();
   const { patientId } = route.params || {};
   const isEditing = !!patientId;
+  const { patient, isLoading: isLoadingPatient } = usePatient(patientId || '');
 
   const createPatient = useCreatePatient();
   const updatePatient = useUpdatePatient();
@@ -46,16 +47,10 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleSubmit = async (values: PatientFormData) => {
     try {
-      // Convert allergies array to comma-separated string
-      const submitData = {
-        ...values,
-        allergies: values.allergies?.join(',') || '',
-      };
-
       if (isEditing) {
         await updatePatient.mutateAsync({
           id: patientId,
-          data: submitData,
+          data: values,
         });
         Alert.alert(t('common.success'), t('patients.patientUpdated'), [
           {
@@ -64,7 +59,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
           },
         ]);
       } else {
-        await createPatient.mutateAsync(submitData);
+        await createPatient.mutateAsync(values);
         Alert.alert(t('common.success'), t('patients.patientCreated'), [
           {
             text: t('common.ok'),
@@ -78,12 +73,16 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   const initialValues: PatientFormData = {
-    name: '',
-    phone: '',
-    dateOfBirth: new Date(new Date().getFullYear() - 18, 0, 1),
-    language: i18n.language === 'es' ? 'ES' : 'EN',
-    diagnosis: '',
-    allergies: [],
+    name: patient?.name || '',
+    phone: patient?.phone || '',
+    dateOfBirth: patient?.dateOfBirth
+      ? new Date(patient.dateOfBirth)
+      : new Date(new Date().getFullYear() - 18, 0, 1),
+    language: patient?.language || (i18n.language === 'es' ? 'ES' : 'EN'),
+    diagnosis: patient?.diagnosis || '',
+    allergies: patient?.allergies
+      ? patient.allergies.split(',').map((a: string) => a.trim()).filter(Boolean)
+      : [],
   };
 
   const getDiagnosisLabel = (code: string) => {
@@ -159,6 +158,11 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const AllergyModal = ({ visible, onClose, onSelect, selected }: any) => {
     const [localSelected, setLocalSelected] = useState<string[]>(selected || []);
+    useEffect(() => {
+      if (visible) {
+        setLocalSelected(selected || []);
+      }
+    }, [visible, selected]);
 
     const toggleAllergy = (code: string) => {
       if (code === 'NKDA') {
@@ -267,8 +271,15 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
           </Text>
         </View>
 
+        {isEditing && isLoadingPatient ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading patient details...</Text>
+          </View>
+        ) : (
         <Formik
           initialValues={initialValues}
+          enableReinitialize
           validationSchema={patientSchema}
           onSubmit={handleSubmit}
         >
@@ -370,7 +381,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Icon name="chevron-down" size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
                   <Text style={styles.helperText}>
-                    Used to verify biosimilar eligibility
+                    Ghana prototype diagnosis set for switch-eligibility support
                   </Text>
                 </View>
 
@@ -391,7 +402,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Icon name="chevron-down" size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
                   <Text style={styles.helperText}>
-                    Drug and formulation allergies
+                    Ghana prototype allergy set for biologic and biosimilar safety checks
                   </Text>
                 </View>
 
@@ -453,6 +464,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
             </View>
           )}
         </Formik>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -462,6 +474,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xl,
+  },
+  loadingText: {
+    marginTop: SPACING.sm,
+    color: COLORS.textSecondary,
+    fontSize: TYPOGRAPHY.fontSize.sm,
   },
   scrollContent: {
     padding: SPACING.lg,

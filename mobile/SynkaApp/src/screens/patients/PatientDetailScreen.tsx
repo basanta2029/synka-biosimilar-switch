@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -26,9 +26,10 @@ const PatientDetailScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [switches, setSwitches] = useState<SwitchRecord[]>([]);
   const [loadingSwitches, setLoadingSwitches] = useState(true);
+  const [upcomingAppointmentsCount, setUpcomingAppointmentsCount] = useState<number>(0);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadSwitches = async () => {
+  const loadSwitches = useCallback(async () => {
     try {
       const response = await switchesApi.getPatientSwitches(patientId);
       setSwitches(response.switches || []);
@@ -37,11 +38,25 @@ const PatientDetailScreen: React.FC<Props> = ({ navigation, route }) => {
     } finally {
       setLoadingSwitches(false);
     }
-  };
+  }, [patientId]);
+
+  const loadUpcomingAppointments = useCallback(async () => {
+    try {
+      const response = await switchesApi.getAppointments({
+        patientId,
+        status: 'SCHEDULED',
+        upcoming: true,
+      });
+      setUpcomingAppointmentsCount(response.count || response.appointments?.length || 0);
+    } catch (error) {
+      console.log('Error loading upcoming appointments:', error);
+    }
+  }, [patientId]);
 
   useEffect(() => {
     loadSwitches();
-  }, [patientId]);
+    loadUpcomingAppointments();
+  }, [loadSwitches, loadUpcomingAppointments]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -199,6 +214,16 @@ const PatientDetailScreen: React.FC<Props> = ({ navigation, route }) => {
               <Icon name="globe" size={14} color={COLORS.textSecondary} />
               <Text style={styles.value}>
                 {patient.language === 'ES' ? 'Spanish' : 'English'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.infoItem}>
+            <Text style={styles.label}>Upcoming Appointments</Text>
+            <View style={styles.languageValue}>
+              <Icon name="calendar" size={14} color={COLORS.textSecondary} />
+              <Text style={styles.value}>
+                {upcomingAppointmentsCount}
               </Text>
             </View>
           </View>

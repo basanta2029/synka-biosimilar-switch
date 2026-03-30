@@ -1,0 +1,20 @@
+[
+  {
+    "code": "RITUXIIN1",
+    "genericName": "Rituximab Injection 100mg/10ml",
+    "dosageForm": "Injection",
+    "strength": "100mg/10ml",
+    "unitOfPricing": "Vial",
+    "priceGhs": 2300,
+    "levelOfPrescribing": "SM"
+  },
+  {
+    "code": "RITUXIIN2",
+    "genericName": "Rituximab Injection 500mg/10ml",
+    "dosageForm": "Injection",
+    "strength": "500mg/10ml",
+    "unitOfPricing": "Vial",
+    "priceGhs": 6515,
+    "levelOfPrescribing": "SM"
+  }
+]

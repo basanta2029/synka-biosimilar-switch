@@ -4,11 +4,20 @@ import { drugService } from './drugService';
 
 export interface EligibilityResult {
   eligible: boolean;
-  patientId: string;
+  reasons: string[];
+  /**
+   * Free-text clinical/contextual notes and warnings for clinician awareness.
+   * Not strictly eligibility blockers.
+   */
+  warnings: string[];
+  /**
+   * Snapshots returned to the client so the mobile app does not need
+   * to make extra calls after eligibility.
+   */
+  patientSnapshot: any;
+  drugSnapshot: any;
   currentDrug: any;
   recommendedBiosimilars: any[];
-  reasons: string[];
-  warnings: string[];
 }
 
 export interface CreateSwitchRequest {
@@ -48,8 +57,12 @@ const DIAGNOSIS_DRUG_CLASS_MAP: Record<string, string[]> = {
   'CLL': ['Anti-CD20'],
   'MULTIPLE_SCLEROSIS': ['Anti-CD20', 'Interferon Beta'],
   'CHRONIC_KIDNEY_DISEASE_ANEMIA': ['Erythropoietin'],
+  'CKD_ANEMIA': ['Erythropoietin'],
   'CHEMOTHERAPY_ANEMIA': ['Erythropoietin'],
   'NEUTROPENIA': ['G-CSF'],
+  'CHEMOTHERAPY_NEUTROPENIA': ['G-CSF'],
+  'DIABETIC_MACULAR_EDEMA': ['Anti-VEGF'],
+  'AGE_RELATED_MACULAR_DEGENERATION': ['Anti-VEGF'],
   'OSTEOPOROSIS': ['Bone Modifier'],
   'DIABETES_TYPE_2': ['GLP-1 Agonist', 'Insulin'],
 };
@@ -64,15 +77,70 @@ const ALLERGY_DRUG_RELATIONSHIPS: Record<string, string[]> = {
   'BEVACIZUMAB': ['avastin', 'mvasi', 'zirabev', 'bevacizumab'],
   'PEGFILGRASTIM': ['neulasta', 'fulphila', 'udenyca', 'ziextenzo', 'nyvepria', 'pegfilgrastim'],
   'FILGRASTIM': ['neupogen', 'zarxio', 'nivestym', 'granix', 'releuko', 'filgrastim'],
+  'EPOETIN': ['eprex', 'binocrit', 'epoetin'],
+  'RANIBIZUMAB': ['lucentis', 'bioucenta', 'ranibizumab'],
   'MOUSE_PROTEIN': ['rituximab', 'infliximab', 'trastuzumab', 'bevacizumab'],
+  'MURINE_PROTEINS': ['rituximab', 'infliximab', 'trastuzumab', 'bevacizumab'],
   'HAMSTER_PROTEIN': ['adalimumab', 'etanercept'],
+  'ECOLI_PROTEINS': ['filgrastim', 'pegfilgrastim', 'insulin'],
   'ECOLI_PROTEIN': ['filgrastim', 'pegfilgrastim', 'insulin'],
   'POLYSORBATE': ['adalimumab', 'infliximab', 'rituximab', 'trastuzumab'],
   'LATEX': [], // Latex allergy doesn't affect drug eligibility, but is noted for injection devices
   'NKDA': [], // No Known Drug Allergies
 };
 
+// Deterministic Ghana prototype mapping: diagnosis -> allowed active ingredients
+const GHANA_DIAGNOSIS_ALLOWED_INGREDIENTS: Record<string, string[]> = {
+  RHEUMATOID_ARTHRITIS: ['adalimumab', 'rituximab'],
+  CROHNS_DISEASE: ['adalimumab'],
+  ULCERATIVE_COLITIS: ['adalimumab'],
+  PSORIATIC_ARTHRITIS: ['adalimumab'],
+  ANKYLOSING_SPONDYLITIS: ['adalimumab'],
+  HER2_BREAST_CANCER: ['trastuzumab'],
+  HER2_GASTRIC_CANCER: ['trastuzumab'],
+  NON_HODGKIN_LYMPHOMA: ['rituximab'],
+  CLL: ['rituximab'],
+  CHRONIC_KIDNEY_DISEASE_ANEMIA: ['epoetin'],
+  CKD_ANEMIA: ['epoetin'],
+  CHEMOTHERAPY_ANEMIA: ['epoetin'],
+  DIABETIC_MACULAR_EDEMA: ['ranibizumab'],
+  AGE_RELATED_MACULAR_DEGENERATION: ['ranibizumab'],
+};
+
 export class SwitchService {
+  private normalizeIngredient(value?: string): string {
+    if (!value) return '';
+    const lower = value.toLowerCase();
+    // Keep base molecule for strings like "trastuzumab-dkst"
+    return lower.split('-')[0].trim();
+  }
+
+  private hasDrugAllergyContraindication(
+    allergyCodes: string[],
+    drugName: string,
+    activeIngredient?: string
+  ): { blocked: boolean; matchedAllergies: string[] } {
+    const drugNameLower = drugName.toLowerCase();
+    const ingredientLower = this.normalizeIngredient(activeIngredient);
+    const matchedAllergies: string[] = [];
+
+    for (const allergyCode of allergyCodes) {
+      const relatedDrugs = ALLERGY_DRUG_RELATIONSHIPS[allergyCode] || [];
+      const isContraindicated = relatedDrugs.some((drug: string) =>
+        drugNameLower.includes(drug.toLowerCase()) ||
+        ingredientLower.includes(drug.toLowerCase()) ||
+        drug.toLowerCase().includes(drugNameLower) ||
+        drug.toLowerCase().includes(ingredientLower)
+      );
+
+      if (isContraindicated) {
+        matchedAllergies.push(allergyCode);
+      }
+    }
+
+    return { blocked: matchedAllergies.length > 0, matchedAllergies };
+  }
+
   /**
    * Check patient eligibility for biosimilar switch
    * This is the Eligibility Engine
@@ -100,24 +168,63 @@ export class SwitchService {
       throw new Error('Patient not found');
     }
 
-    // Get current drug and its biosimilar alternatives
-    const alternatives = await drugService.getBiosimilarAlternatives(currentDrugId);
-    const { brandDrug, biosimilars } = alternatives;
+    // PRD core rule: Age >= 18
+    const today = new Date();
+    const ageYears =
+      today.getFullYear() - patient.dateOfBirth.getFullYear() -
+      (today < new Date(today.getFullYear(), patient.dateOfBirth.getMonth(), patient.dateOfBirth.getDate()) ? 1 : 0);
 
     const reasons: string[] = [];
     const warnings: string[] = [];
     let eligible = true;
 
+    if (ageYears < 18) {
+      eligible = false;
+      reasons.push('UNDER_18: Patient must be at least 18 years old for biosimilar switch');
+    }
+
+    // Get current drug
+    const currentDrug = await prisma.drug.findUnique({
+      where: { id: currentDrugId },
+    });
+
+    if (!currentDrug) {
+      throw new Error('Drug not found');
+    }
+
+    // PRD rule: current drug must be a brand biologic, not already a biosimilar
+    if (currentDrug.type !== 'BRAND') {
+      return {
+        eligible: false,
+        reasons: ['ALREADY_BIOSIMILAR: Current medication is already a biosimilar; switch is not applicable'],
+        warnings,
+        patientSnapshot: {
+          id: patient.id,
+          name: patient.name,
+          dateOfBirth: patient.dateOfBirth,
+          language: patient.language,
+          allergies: patient.allergies,
+        },
+        drugSnapshot: currentDrug,
+        currentDrug,
+        recommendedBiosimilars: [],
+      };
+    }
+
+    // Get current drug and its biosimilar alternatives (also computes savings)
+    const alternatives = await drugService.getBiosimilarAlternatives(currentDrugId);
+    const { brandDrug, biosimilars } = alternatives;
+
     // Check if patient has pending switches
     if (patient.switches.length > 0) {
       eligible = false;
-      reasons.push('Patient has a pending switch that must be completed or cancelled first');
+      reasons.push('PENDING_SWITCH: Patient has a pending switch that must be completed or cancelled first');
     }
 
     // Check if there are available biosimilars
     if (biosimilars.length === 0) {
       eligible = false;
-      reasons.push('No approved biosimilar alternatives available for this medication');
+      reasons.push('NO_BIOSIMILARS: No approved biosimilar alternatives available for this medication');
     }
 
     // Check diagnosis-drug compatibility
@@ -127,53 +234,51 @@ export class SwitchService {
 
       if (compatibleClasses.length > 0 && drugClass) {
         const isCompatible = compatibleClasses.some(
-          (c: string) => drugClass.toLowerCase().includes(c.toLowerCase()) ||
-                        c.toLowerCase().includes(drugClass.toLowerCase())
+          (c: string) =>
+            drugClass.toLowerCase().includes(c.toLowerCase()) ||
+            c.toLowerCase().includes(drugClass.toLowerCase())
         );
 
         if (isCompatible) {
-          reasons.push(`Diagnosis confirmed: ${this.formatDiagnosis(patient.diagnosis)} is treated with ${drugClass} medications`);
+          warnings.push(
+            `DIAGNOSIS_MATCH: ${this.formatDiagnosis(
+              patient.diagnosis
+            )} is commonly treated with ${drugClass} medications`
+          );
         } else {
-          warnings.push(`Note: Patient's diagnosis (${this.formatDiagnosis(patient.diagnosis)}) may not typically require ${drugClass} therapy. Please verify indication.`);
+          warnings.push(
+            `DIAGNOSIS_MISMATCH: Patient's diagnosis (${this.formatDiagnosis(
+              patient.diagnosis
+            )}) may not typically require ${drugClass} therapy. Please verify indication.`
+          );
         }
       }
     } else {
-      warnings.push('No diagnosis on file. Consider updating patient record with primary diagnosis for more accurate eligibility assessment.');
+      warnings.push(
+        'NO_DIAGNOSIS_ON_FILE: No diagnosis on file. Consider updating patient record for more accurate eligibility assessment.'
+      );
     }
 
     // Check for allergies that might affect eligibility
+    let patientAllergyCodes: string[] = [];
     if (patient.allergies) {
-      const patientAllergyCodes = patient.allergies.split(',').map((a: string) => a.trim().toUpperCase());
+      patientAllergyCodes = patient.allergies.split(',').map((a: string) => a.trim().toUpperCase());
       const hasNKDA = patientAllergyCodes.includes('NKDA');
 
       if (!hasNKDA) {
-        // Check each allergy against the drug being prescribed
-        const drugNameLower = brandDrug.name.toLowerCase();
-        const activeIngredient = brandDrug.activeIngredient?.toLowerCase() || '';
+        const allergyCheck = this.hasDrugAllergyContraindication(
+          patientAllergyCodes,
+          brandDrug.name,
+          brandDrug.activeIngredient || ''
+        );
 
-        let hasContraindication = false;
-        const contraindicatedAllergies: string[] = [];
-
-        for (const allergyCode of patientAllergyCodes) {
-          const relatedDrugs = ALLERGY_DRUG_RELATIONSHIPS[allergyCode] || [];
-
-          // Check if any related drug matches the brand drug or active ingredient
-          const isContraindicated = relatedDrugs.some((drug: string) =>
-            drugNameLower.includes(drug.toLowerCase()) ||
-            activeIngredient.includes(drug.toLowerCase()) ||
-            drug.toLowerCase().includes(drugNameLower) ||
-            drug.toLowerCase().includes(activeIngredient)
-          );
-
-          if (isContraindicated) {
-            hasContraindication = true;
-            contraindicatedAllergies.push(allergyCode);
-          }
-        }
-
-        if (hasContraindication) {
+        if (allergyCheck.blocked) {
           eligible = false;
-          reasons.push(`Patient has documented allergy (${contraindicatedAllergies.join(', ')}) that may be contraindicated with ${brandDrug.name}`);
+          reasons.push(
+            `ALLERGY_HISTORY: Patient has documented allergy (${allergyCheck.matchedAllergies.join(
+              ', '
+            )}) that may be contraindicated with ${brandDrug.name}`
+          );
         } else {
           // General warning about allergies for awareness
           const allergyList = patientAllergyCodes.filter((a: string) => a !== 'NKDA').join(', ');
@@ -184,34 +289,101 @@ export class SwitchService {
       }
     }
 
+    // Deterministic Ghana diagnosis gating for recommendation list
+    let filteredBiosimilars = biosimilars;
+    if (patient.diagnosis) {
+      const allowedIngredients = GHANA_DIAGNOSIS_ALLOWED_INGREDIENTS[patient.diagnosis];
+      if (allowedIngredients && allowedIngredients.length > 0) {
+        filteredBiosimilars = filteredBiosimilars.filter((biosimilar: any) => {
+          const ingredient = this.normalizeIngredient(biosimilar.activeIngredient || '');
+          return allowedIngredients.some((allowed) => ingredient.includes(allowed));
+        });
+        warnings.push(
+          `GHANA_DIAGNOSIS_RULE: ${this.formatDiagnosis(patient.diagnosis)} allows molecules: ${allowedIngredients.join(
+            ', '
+          )}.`
+        );
+      }
+    }
+
+    // Remove biosimilars blocked by patient allergy history
+    const hasNKDA = patientAllergyCodes.includes('NKDA');
+    if (patientAllergyCodes.length > 0 && !hasNKDA) {
+      const allergySafeBiosimilars: any[] = [];
+      const excludedByAllergy: string[] = [];
+
+      for (const biosimilar of filteredBiosimilars) {
+        const allergyCheck = this.hasDrugAllergyContraindication(
+          patientAllergyCodes,
+          biosimilar.name,
+          biosimilar.activeIngredient || ''
+        );
+        if (allergyCheck.blocked) {
+          excludedByAllergy.push(`${biosimilar.name} [${allergyCheck.matchedAllergies.join(', ')}]`);
+          continue;
+        }
+        allergySafeBiosimilars.push(biosimilar);
+      }
+
+      filteredBiosimilars = allergySafeBiosimilars;
+      if (excludedByAllergy.length > 0) {
+        warnings.push(
+          `ALLERGY_FILTER: Excluded ${excludedByAllergy.length} candidate(s): ${excludedByAllergy.join('; ')}`
+        );
+      }
+    }
+
+    if (filteredBiosimilars.length === 0) {
+      eligible = false;
+      reasons.push(
+        'NO_GHANA_MATCH: No biosimilar remained after Ghana diagnosis/allergy safety filters.'
+      );
+    }
+
     // Check for biosimilars designated interchangeable by a reference NRA
-    const interchangeableBiosimilars = biosimilars.filter(
+    const interchangeableBiosimilars = filteredBiosimilars.filter(
       (b: any) => b.interchangeability === 'INTERCHANGEABLE'
     );
 
     if (interchangeableBiosimilars.length > 0) {
-      reasons.push(
+      warnings.push(
         `${interchangeableBiosimilars.length} biosimilar option(s) have strong interchangeability data from at least one strict regulator; ` +
-        `under Ghana FDA guidelines, switching still requires a prescriber decision and is not automatic at the pharmacy level.`
+          `under Ghana FDA guidelines, switching still requires a prescriber decision and is not automatic at the pharmacy level.`
       );
     }
 
     // Add cost savings info
-    if (biosimilars.length > 0) {
-      const bestSavings = biosimilars[0]; // Already sorted by savings
-      reasons.push(
-        `Potential savings: up to GHS ${bestSavings.annualSavings.toLocaleString()}/year ` +
-        `(${bestSavings.savingsPercent}% reduction, estimated based on clinic pricing).`
+    if (filteredBiosimilars.length > 0) {
+      const bestSavings = filteredBiosimilars[0]; // Already sorted by savings
+      warnings.push(
+        `COST_SAVINGS: Potential savings up to GHS ${bestSavings.annualSavings.toLocaleString()}/year ` +
+          `(${bestSavings.savingsPercent}% reduction, estimated based on clinic pricing).`
+      );
+    }
+
+    // NHIS coverage/prototype validation warnings for safe messaging
+    const nhisMatchedCount = filteredBiosimilars.filter((b: any) => b.nhisCoverage?.isListed).length;
+    if (filteredBiosimilars.length > 0) {
+      warnings.push(
+        `NHIS_CHECK: ${nhisMatchedCount}/${filteredBiosimilars.length} biosimilar option(s) matched NHIS 2025 pricing entries. ` +
+          `Use matched pricing only; keep unmatched products as prototype/unverified.`
       );
     }
 
     return {
       eligible,
-      patientId,
-      currentDrug: brandDrug,
-      recommendedBiosimilars: biosimilars,
       reasons,
       warnings,
+      patientSnapshot: {
+        id: patient.id,
+        name: patient.name,
+        dateOfBirth: patient.dateOfBirth,
+        language: patient.language,
+        allergies: patient.allergies,
+      },
+      drugSnapshot: brandDrug,
+      currentDrug: brandDrug,
+      recommendedBiosimilars: filteredBiosimilars,
     };
   }
 
@@ -678,18 +850,21 @@ export class SwitchService {
       pendingSwitches,
       completedSwitches,
       failedSwitches,
-      upcomingAppointments,
+      upcomingFollowUpPatients,
       unreviewedAlerts,
     ] = await Promise.all([
       prisma.switchRecord.count(),
       prisma.switchRecord.count({ where: { status: 'PENDING' } }),
       prisma.switchRecord.count({ where: { status: 'COMPLETED' } }),
       prisma.switchRecord.count({ where: { status: 'FAILED' } }),
-      prisma.appointment.count({
+      prisma.appointment.findMany({
         where: {
           status: 'SCHEDULED',
           scheduledAt: { gte: new Date() },
+          appointmentType: { in: ['DAY_3', 'DAY_14'] },
         },
+        select: { patientId: true },
+        distinct: ['patientId'],
       }),
       prisma.alert.count({ where: { reviewed: false } }),
     ]);
@@ -716,7 +891,8 @@ export class SwitchService {
       completedSwitches,
       failedSwitches,
       successRate,
-      upcomingAppointments,
+      // Count unique patients with upcoming follow-up visits
+      upcomingAppointments: upcomingFollowUpPatients.length,
       unreviewedAlerts,
       totalMonthlySavings,
       totalAnnualSavings: totalMonthlySavings * 12,

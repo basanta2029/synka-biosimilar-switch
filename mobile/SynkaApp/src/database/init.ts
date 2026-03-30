@@ -66,12 +66,24 @@ const createTables = async (db: SQLite.SQLiteDatabase): Promise<void> => {
         phone TEXT NOT NULL,
         dateOfBirth TEXT NOT NULL,
         language TEXT DEFAULT 'EN',
+        diagnosis TEXT,
         allergies TEXT,
         createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
         updatedAt TEXT DEFAULT CURRENT_TIMESTAMP,
         synced INTEGER DEFAULT 0
       );
     `);
+
+    // Lightweight migration for existing local databases
+    try {
+      await db.executeSql('ALTER TABLE patients ADD COLUMN diagnosis TEXT');
+    } catch (error: any) {
+      // Ignore duplicate-column errors on already-migrated devices
+      const message = String(error?.message || '').toLowerCase();
+      if (!message.includes('duplicate') && !message.includes('exists')) {
+        throw error;
+      }
+    }
 
     await db.executeSql(`
       CREATE INDEX IF NOT EXISTS idx_patients_phone ON patients(phone);

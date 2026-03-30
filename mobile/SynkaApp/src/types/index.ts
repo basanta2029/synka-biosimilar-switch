@@ -77,12 +77,27 @@ export interface BiosimilarWithSavings extends Drug {
   monthlySavings: number;
   annualSavings: number;
   savingsPercent: number;
+  nhisCoverage?: {
+    verificationStatus: 'MATCHED_NHIS_2025' | 'NOT_FOUND_IN_NHIS_2025' | 'NEEDS_MANUAL_REVIEW';
+    isListed: boolean;
+    matchedOn: 'ACTIVE_INGREDIENT' | 'GENERIC_NAME' | null;
+    notes: string;
+    pricing?: {
+      nhisCode: string;
+      genericName: string;
+      unitOfPricing: string;
+      priceGhs: number;
+      levelOfPrescribing: string;
+      sourceVersion: string;
+    };
+  };
 }
 
 // Eligibility check result
 export interface EligibilityResult {
   eligible: boolean;
-  patientId: string;
+  patientSnapshot?: any;
+  drugSnapshot?: Drug;
   currentDrug: Drug;
   recommendedBiosimilars: BiosimilarWithSavings[];
   reasons: string[];
@@ -177,9 +192,9 @@ export interface Alert {
 // Sync Queue Types
 export interface SyncQueueItem {
   id?: number;
-  entityType: string;
+  entityType: 'patient' | 'switch' | 'followUp' | 'appointment';
   entityId: string;
-  action: 'create' | 'update' | 'delete';
+  action: 'create' | 'update' | 'delete' | 'updateConsent';
   payload: string;
   createdAt: string;
   retryCount: number;
@@ -193,8 +208,9 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+/** Matches GET /api/v1/patients (backend returns `patients`, not `data`). */
 export interface PaginatedResponse<T> {
-  data: T[];
+  patients: T[];
   total: number;
   page: number;
   limit: number;

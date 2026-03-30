@@ -30,6 +30,7 @@ export const patientsDb = {
           phone: row.phone,
           dateOfBirth: row.dateOfBirth,
           language: row.language,
+          diagnosis: row.diagnosis,
           allergies: row.allergies,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -61,6 +62,7 @@ export const patientsDb = {
           phone: row.phone,
           dateOfBirth: row.dateOfBirth,
           language: row.language,
+          diagnosis: row.diagnosis,
           allergies: row.allergies,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -86,9 +88,20 @@ export const patientsDb = {
       const now = new Date().toISOString();
 
       await db.executeSql(
-        `INSERT INTO patients (id, name, phone, dateOfBirth, language, allergies, createdAt, updatedAt, synced)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, patient.name, patient.phone, patient.dateOfBirth, patient.language, patient.allergies || null, now, now, 0]
+        `INSERT INTO patients (id, name, phone, dateOfBirth, language, diagnosis, allergies, createdAt, updatedAt, synced)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          patient.name,
+          patient.phone,
+          patient.dateOfBirth,
+          patient.language,
+          patient.diagnosis || null,
+          patient.allergies || null,
+          now,
+          now,
+          0,
+        ]
       );
 
       return {
@@ -130,6 +143,10 @@ export const patientsDb = {
       if (updates.language) {
         fields.push('language = ?');
         values.push(updates.language);
+      }
+      if (updates.diagnosis !== undefined) {
+        fields.push('diagnosis = ?');
+        values.push(updates.diagnosis);
       }
       if (updates.allergies !== undefined) {
         fields.push('allergies = ?');
@@ -197,6 +214,7 @@ export const patientsDb = {
           phone: row.phone,
           dateOfBirth: row.dateOfBirth,
           language: row.language,
+          diagnosis: row.diagnosis,
           allergies: row.allergies,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -237,7 +255,7 @@ export const patientsDb = {
         // Update existing patient
         await db.executeSql(
           `UPDATE patients
-           SET name = ?, phone = ?, dateOfBirth = ?, language = ?, allergies = ?,
+           SET name = ?, phone = ?, dateOfBirth = ?, language = ?, diagnosis = ?, allergies = ?,
                createdAt = ?, updatedAt = ?, synced = 1
            WHERE id = ?`,
           [
@@ -245,6 +263,7 @@ export const patientsDb = {
             patient.phone,
             patient.dateOfBirth,
             patient.language,
+            patient.diagnosis || null,
             patient.allergies || null,
             patient.createdAt,
             patient.updatedAt,
@@ -254,14 +273,15 @@ export const patientsDb = {
       } else {
         // Insert new patient
         await db.executeSql(
-          `INSERT INTO patients (id, name, phone, dateOfBirth, language, allergies, createdAt, updatedAt, synced)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+          `INSERT INTO patients (id, name, phone, dateOfBirth, language, diagnosis, allergies, createdAt, updatedAt, synced)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
           [
             patient.id,
             patient.name,
             patient.phone,
             patient.dateOfBirth,
             patient.language,
+            patient.diagnosis || null,
             patient.allergies || null,
             patient.createdAt,
             patient.updatedAt,
@@ -304,14 +324,15 @@ export const patientsDb = {
       await db.transaction((tx) => {
         patientsToUpsert.forEach((patient) => {
           tx.executeSql(
-            `INSERT OR REPLACE INTO patients (id, name, phone, dateOfBirth, language, allergies, createdAt, updatedAt, synced)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+            `INSERT OR REPLACE INTO patients (id, name, phone, dateOfBirth, language, diagnosis, allergies, createdAt, updatedAt, synced)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
             [
               patient.id,
               patient.name,
               patient.phone,
               patient.dateOfBirth,
               patient.language,
+              patient.diagnosis || null,
               patient.allergies || null,
               patient.createdAt,
               patient.updatedAt,

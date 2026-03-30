@@ -35,7 +35,7 @@ interface Appointment {
   followUp: any | null;
 }
 
-type FilterTab = 'upcoming' | 'all' | 'completed';
+type FilterTab = 'upcoming' | 'completed' | 'missed';
 
 const AppointmentsScreen: React.FC = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -54,6 +54,8 @@ const AppointmentsScreen: React.FC = () => {
         filters.status = 'SCHEDULED';
       } else if (activeTab === 'completed') {
         filters.status = 'COMPLETED';
+      } else if (activeTab === 'missed') {
+        filters.status = 'MISSED';
       }
 
       const response = await switchesApi.getAppointments(filters);
@@ -199,14 +201,18 @@ const AppointmentsScreen: React.FC = () => {
 
   const renderTabs = () => (
     <View style={styles.tabContainer}>
-      {(['upcoming', 'all', 'completed'] as FilterTab[]).map((tab) => (
+      {(['upcoming', 'completed', 'missed'] as FilterTab[]).map((tab) => (
         <TouchableOpacity
           key={tab}
           style={[styles.tab, activeTab === tab && styles.activeTab]}
           onPress={() => setActiveTab(tab)}
         >
           <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'upcoming'
+              ? 'Upcoming'
+              : tab === 'completed'
+              ? 'Completed'
+              : 'Missed'}
           </Text>
         </TouchableOpacity>
       ))}
@@ -224,7 +230,7 @@ const AppointmentsScreen: React.FC = () => {
           ? 'No upcoming follow-up appointments scheduled'
           : activeTab === 'completed'
           ? 'No completed appointments yet'
-          : 'No appointments found'}
+          : 'No missed appointments'}
       </Text>
     </View>
   );

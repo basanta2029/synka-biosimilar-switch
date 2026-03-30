@@ -19,7 +19,7 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set, _get) => ({
   user: null,
   token: null,
   isAuthenticated: false,
@@ -116,6 +116,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isLoading: false,
           });
         } catch (error) {
+          console.error('Auth token validation failed:', error);
           // Token is invalid, clear storage
           await storage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
           await storage.removeItem(STORAGE_KEYS.USER_DATA);

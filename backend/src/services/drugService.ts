@@ -1,7 +1,131 @@
 import { PrismaClient, DrugType, InterchangeabilityStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
+import nhisCoverageMap from '../data/nhis2025-biosimilar-map.json';
+
+type NhisVerificationStatus = 'MATCHED_NHIS_2025' | 'NOT_FOUND_IN_NHIS_2025' | 'NEEDS_MANUAL_REVIEW';
+
+interface NhisCoverageSnapshot {
+  verificationStatus: NhisVerificationStatus;
+  isListed: boolean;
+  matchedOn: 'ACTIVE_INGREDIENT' | 'GENERIC_NAME' | null;
+  notes: string;
+  pricing?: {
+    nhisCode: string;
+    genericName: string;
+    unitOfPricing: string;
+    priceGhs: number;
+    levelOfPrescribing: string;
+    sourceVersion: string;
+  };
+}
+
+interface NhisCoverageMapFile {
+  sourceVersion: string;
+  lastReviewedAt: string;
+  notes: string;
+  ingredients: Record<string, Omit<NhisCoverageSnapshot, 'matchedOn' | 'pricing'> & {
+    pricing?: Omit<NonNullable<NhisCoverageSnapshot['pricing']>, 'sourceVersion'>;
+  }>;
+}
+
+const NHIS_2025_COVERAGE_MAP = nhisCoverageMap as NhisCoverageMapFile;
+const NHIS_2025_INGREDIENT_COVERAGE: Record<string, Omit<NhisCoverageSnapshot, 'matchedOn'>> = Object.fromEntries(
+  Object.entries(NHIS_2025_COVERAGE_MAP.ingredients).map(([key, value]) => [
+    key,
+    {
+      ...value,
+      pricing: value.pricing
+        ? {
+            ...value.pricing,
+            sourceVersion: NHIS_2025_COVERAGE_MAP.sourceVersion,
+          }
+        : undefined,
+    },
+  ])
+);
+
+interface NhisCoverageReportItem {
+  ingredient: string;
+  verificationStatus: NhisVerificationStatus;
+  isListed: boolean;
+  notes: string;
+  pricing?: NhisCoverageSnapshot['pricing'];
+}
+
+interface NhisCoverageReport {
+  sourceVersion: string;
+  lastReviewedAt: string;
+  notes: string;
+  totalMappedIngredients: number;
+  listedCount: number;
+  unmappedOrReviewCount: number;
+  items: NhisCoverageReportItem[];
+}
+
+const DEFAULT_NHIS_SNAPSHOT: NhisCoverageSnapshot = {
+  verificationStatus: 'NEEDS_MANUAL_REVIEW',
+  isListed: false,
+  matchedOn: null,
+  notes:
+    'No NHIS 2025 mapping found for this product in prototype rules. Requires manual pharmacy/regulatory review.',
+};
 
 export class DrugService {
+  /**
+   * Prototype NHIS cross-check:
+   * - Uses NHIS 2025 snapshot mappings by active ingredient/generic name.
+   * - Returns verification metadata so UI can avoid over-claiming coverage.
+   */
+  private getNhisCoverageSnapshot(drug: any): NhisCoverageSnapshot {
+    const ingredient = (drug.activeIngredient || '').toLowerCase();
+    const name = (drug.name || '').toLowerCase();
+    const candidates = Object.keys(NHIS_2025_INGREDIENT_COVERAGE);
+
+    for (const key of candidates) {
+      if (ingredient.includes(key)) {
+        return {
+          ...NHIS_2025_INGREDIENT_COVERAGE[key],
+          matchedOn: 'ACTIVE_INGREDIENT',
+        };
+      }
+      if (name.includes(key)) {
+        return {
+          ...NHIS_2025_INGREDIENT_COVERAGE[key],
+          matchedOn: 'GENERIC_NAME',
+        };
+      }
+    }
+
+    return DEFAULT_NHIS_SNAPSHOT;
+  }
+
+  /**
+   * Returns the current NHIS prototype coverage map for admin/review use.
+   */
+  getNhisCoverageReport(): NhisCoverageReport {
+    const items: NhisCoverageReportItem[] = Object.entries(NHIS_2025_INGREDIENT_COVERAGE).map(
+      ([ingredient, snapshot]) => ({
+        ingredient,
+        verificationStatus: snapshot.verificationStatus,
+        isListed: snapshot.isListed,
+        notes: snapshot.notes,
+        pricing: snapshot.pricing,
+      })
+    );
+
+    const listedCount = items.filter((item) => item.isListed).length;
+
+    return {
+      sourceVersion: NHIS_2025_COVERAGE_MAP.sourceVersion,
+      lastReviewedAt: NHIS_2025_COVERAGE_MAP.lastReviewedAt,
+      notes: NHIS_2025_COVERAGE_MAP.notes,
+      totalMappedIngredients: items.length,
+      listedCount,
+      unmappedOrReviewCount: items.length - listedCount,
+      items,
+    };
+  }
+
   /**
    * Get all drugs with optional filtering by type
    */
@@ -83,6 +207,7 @@ export class DrugService {
         monthlySavings,
         annualSavings,
         savingsPercent: Math.round(savingsPercent),
+        nhisCoverage: this.getNhisCoverageSnapshot(biosimilar),
       };
     });
 
@@ -185,6 +310,51 @@ export class DrugService {
         fdaApprovalDate: new Date('1991-02-20'),
         interchangeability: 'NOT_APPLICABLE' as InterchangeabilityStatus,
         indications: 'Chemotherapy-Induced Neutropenia, Bone Marrow Transplant, Peripheral Blood Progenitor Cell Collection, Severe Chronic Neutropenia, Acute Radiation Syndrome',
+        administrationRoute: 'Subcutaneous or Intravenous',
+      },
+      {
+        name: 'MabThera',
+        type: 'BRAND' as DrugType,
+        costPerMonth: 6900,
+        approvedForSwitch: true,
+        therapeuticClass: 'Anti-CD20',
+        manufacturer: 'Roche',
+        description: 'Reference anti-CD20 biologic used for NHL/CLL and autoimmune indications in specialist care.',
+        activeIngredient: 'rituximab',
+        blaNumber: 'REFERENCE_PRODUCT',
+        fdaApprovalDate: new Date('1997-11-26'),
+        interchangeability: 'NOT_APPLICABLE' as InterchangeabilityStatus,
+        indications: 'Non-Hodgkin Lymphoma, CLL, Rheumatoid Arthritis',
+        administrationRoute: 'Intravenous infusion',
+      },
+      {
+        name: 'Lucentis',
+        type: 'BRAND' as DrugType,
+        costPerMonth: 4800,
+        approvedForSwitch: true,
+        therapeuticClass: 'Anti-VEGF',
+        manufacturer: 'Novartis / Genentech',
+        description: 'Reference anti-VEGF biologic for retinal vascular disorders.',
+        activeIngredient: 'ranibizumab',
+        blaNumber: 'REFERENCE_PRODUCT',
+        fdaApprovalDate: new Date('2006-06-30'),
+        interchangeability: 'NOT_APPLICABLE' as InterchangeabilityStatus,
+        indications: 'Age-related Macular Degeneration, Diabetic Macular Edema',
+        administrationRoute: 'Intravitreal injection',
+      },
+      {
+        name: 'Eprex',
+        type: 'BRAND' as DrugType,
+        costPerMonth: 420,
+        approvedForSwitch: true,
+        therapeuticClass: 'Erythropoietin',
+        manufacturer: 'Janssen',
+        description: 'Reference erythropoiesis-stimulating biologic for anemia in CKD and oncology settings.',
+        activeIngredient: 'epoetin alfa',
+        blaNumber: 'REFERENCE_PRODUCT',
+        fdaApprovalDate: new Date('1989-06-01'),
+        interchangeability: 'NOT_APPLICABLE' as InterchangeabilityStatus,
+        indications: 'Anemia of Chronic Kidney Disease, Chemotherapy-related Anemia',
         administrationRoute: 'Subcutaneous or Intravenous',
       },
     ];
@@ -426,6 +596,60 @@ export class DrugService {
         interchangeability: 'BIOSIMILAR' as InterchangeabilityStatus,
         referenceProductId: createdBrands['filgrastim'].id,
         indications: 'Chemotherapy-Induced Neutropenia, Bone Marrow Transplant, Peripheral Blood Progenitor Cell Collection, Severe Chronic Neutropenia, Acute Radiation Syndrome',
+        administrationRoute: 'Subcutaneous or Intravenous',
+      },
+      {
+        name: 'Truxima',
+        type: 'BIOSIMILAR' as DrugType,
+        costPerMonth: 5100,
+        approvedForSwitch: true,
+        therapeuticClass: 'Anti-CD20',
+        manufacturer: 'Celltrion',
+        description:
+          'Prototype rituximab biosimilar entry for Ghana workflow testing; final availability must be confirmed against Ghana FDA product register.',
+        activeIngredient: 'rituximab-abbs',
+        fdaSuffix: '-abbs',
+        blaNumber: 'BLA 761088',
+        fdaApprovalDate: new Date('2018-11-28'),
+        interchangeability: 'BIOSIMILAR' as InterchangeabilityStatus,
+        referenceProductId: createdBrands['rituximab'].id,
+        indications: 'Non-Hodgkin Lymphoma, CLL, Rheumatoid Arthritis',
+        administrationRoute: 'Intravenous infusion',
+      },
+      {
+        name: 'BioUcenta',
+        type: 'BIOSIMILAR' as DrugType,
+        costPerMonth: 2100,
+        approvedForSwitch: true,
+        therapeuticClass: 'Anti-VEGF',
+        manufacturer: 'Prototype / pending local verification',
+        description:
+          'Prototype ranibizumab biosimilar candidate for app workflows. Do not treat as verified Ghana registration without official evidence links.',
+        activeIngredient: 'ranibizumab',
+        fdaSuffix: null,
+        blaNumber: 'PROTOTYPE_ONLY',
+        fdaApprovalDate: null,
+        interchangeability: 'BIOSIMILAR' as InterchangeabilityStatus,
+        referenceProductId: createdBrands['ranibizumab'].id,
+        indications: 'Age-related Macular Degeneration, Diabetic Macular Edema',
+        administrationRoute: 'Intravitreal injection',
+      },
+      {
+        name: 'Binocrit',
+        type: 'BIOSIMILAR' as DrugType,
+        costPerMonth: 250,
+        approvedForSwitch: true,
+        therapeuticClass: 'Erythropoietin',
+        manufacturer: 'Sandoz',
+        description:
+          'Prototype epoetin alfa biosimilar candidate for app workflows. Keep as unverified until Ghana FDA + NHIS evidence is attached.',
+        activeIngredient: 'epoetin alfa',
+        fdaSuffix: null,
+        blaNumber: 'PROTOTYPE_ONLY',
+        fdaApprovalDate: null,
+        interchangeability: 'BIOSIMILAR' as InterchangeabilityStatus,
+        referenceProductId: createdBrands['epoetin alfa'].id,
+        indications: 'Anemia of Chronic Kidney Disease, Chemotherapy-related Anemia',
         administrationRoute: 'Subcutaneous or Intravenous',
       },
     ];

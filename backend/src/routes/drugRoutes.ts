@@ -15,6 +15,11 @@ router.get('/interchangeable', (req, res, next) =>
   drugController.getInterchangeableBiosimilars(req, res, next)
 );
 
+// GET /api/v1/drugs/nhis/coverage-report - Get NHIS prototype mapping report for review
+router.get('/nhis/coverage-report', (req, res, next) =>
+  drugController.getNhisCoverageReport(req, res, next)
+);
+
 // GET /api/v1/drugs/therapeutic-class/:therapeuticClass - Get drugs by therapeutic class
 router.get('/therapeutic-class/:therapeuticClass', (req, res, next) =>
   drugController.getDrugsByTherapeuticClass(req, res, next)

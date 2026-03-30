@@ -24,7 +24,7 @@
 | **Review** | Finished code waiting for testing |
 | **Done** | All completed work from Sprint 1-5 |
 
----
+
 
 ## STEP 1: Create "Done" Column
 

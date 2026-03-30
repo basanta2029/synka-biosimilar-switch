@@ -1,12 +1,50 @@
 import NetInfo from '@react-native-community/netinfo';
 import { patientsDb, syncQueueDb } from '../database';
 import { patientsApi } from '../api';
+import { switchesApi, CreateSwitchRequest, ConsentRequest, FollowUpRequest } from '../api/switches';
 import { Patient, SyncQueueItem } from '../types';
 import { SYNC_CONFIG } from '../constants';
 
 class SyncService {
   private isSyncing = false;
   private syncInterval: NodeJS.Timeout | null = null;
+
+  /**
+   * Resolve duplicate-phone conflicts by linking local data to the existing
+   * server patient record (which may have a different ID).
+   */
+  private async reconcilePatientByPhone(localPatientId: string, phone: string): Promise<boolean> {
+    try {
+      const result = await patientsApi.getPatients({ search: phone, limit: 20, offset: 0 });
+      const serverPatient = result.patients.find((p) => p.phone === phone);
+
+      if (!serverPatient) {
+        return false;
+      }
+
+      // Replace local UUID record with server UUID to keep all API calls consistent.
+      await patientsDb.delete(localPatientId);
+      await syncQueueDb.removeByEntityId('patient', localPatientId);
+      await patientsDb.upsertFromServer(serverPatient);
+      return true;
+    } catch (error) {
+      console.error(`Failed to reconcile patient by phone ${phone}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Backend returns 400 with error: "Validation Error" and message containing the real reason
+   * (e.g. duplicate phone). Older code incorrectly checked `data.error` for the substring "phone".
+   */
+  private isDuplicatePatientPhoneApiError(err: any): boolean {
+    if (err?.response?.status !== 400) return false;
+    const message = String(err?.response?.data?.message || '').toLowerCase();
+    return (
+      message.includes('phone number already') ||
+      (message.includes('phone') && message.includes('already exist'))
+    );
+  }
 
   /**
    * Start automatic sync
@@ -70,40 +108,41 @@ class SyncService {
           try {
             // Try to create on server
             const created = await patientsApi.createPatient({
+              id: patient.id,
               name: patient.name,
               phone: patient.phone,
               dateOfBirth: patient.dateOfBirth,
               language: patient.language,
+              diagnosis: patient.diagnosis,
               allergies: patient.allergies,
             });
 
-            // Handle ID mismatch (server generates new UUID)
+            // IDs should match (offline-first); mark as synced either way.
+            // If server ever returns a different ID, keep local record unchanged to avoid breaking navigation.
             if (created.patient.id !== patient.id) {
-              console.log(`Server returned different ID for ${patient.name}: ${created.patient.id}`);
-              // Delete old local patient
-              await patientsDb.delete(patient.id);
-              // Remove any queue items for old ID
-              await syncQueueDb.removeByEntityId('patient', patient.id);
-              // Insert server patient as synced
-              await patientsDb.upsertFromServer(created.patient);
-            } else {
-              // IDs match - just mark as synced
-              await patientsDb.markAsSynced(patient.id);
+              console.log(`Warning: server returned different ID for ${patient.name}: ${created.patient.id}`);
             }
+            await patientsDb.markAsSynced(patient.id);
 
             // Remove from queue if it was there
             await syncQueueDb.removeByEntityId('patient', patient.id);
             successCount++;
             console.log(`Successfully synced patient ${patient.name}`);
           } catch (error: any) {
-            // Handle duplicate phone number (patient already exists on server)
-            if (error?.response?.status === 400 && error?.response?.data?.error?.includes('phone')) {
-              console.log(`Patient ${patient.name} already exists on server, marking as synced`);
-              await patientsDb.markAsSynced(patient.id);
-              await syncQueueDb.removeByEntityId('patient', patient.id);
-              successCount++;
+            if (this.isDuplicatePatientPhoneApiError(error)) {
+              console.log(`Patient ${patient.name} already exists on server, reconciling by phone`);
+              const reconciled = await this.reconcilePatientByPhone(patient.id, patient.phone);
+              if (reconciled) {
+                successCount++;
+              } else {
+                failedCount++;
+              }
             } else {
-              console.error(`Failed to sync patient ${patient.name}:`, error.message);
+              const detail =
+                error?.response?.data?.message ||
+                error?.response?.data?.error ||
+                error.message;
+              console.error(`Failed to sync patient ${patient.name}:`, detail);
               failedCount++;
             }
           }
@@ -168,6 +207,15 @@ class SyncService {
       case 'patient':
         await this.syncPatient(item.action, item.entityId, payload);
         break;
+      case 'switch':
+        await this.syncSwitch(item.action, item.entityId, payload);
+        break;
+      case 'followUp':
+        await this.syncFollowUp(item.action, item.entityId, payload);
+        break;
+      case 'appointment':
+        await this.syncAppointment(item.action, item.entityId, payload);
+        break;
       default:
         console.warn(`Unknown entity type: ${item.entityType}`);
     }
@@ -182,9 +230,10 @@ class SyncService {
     payload: any
   ): Promise<void> {
     switch (action) {
-      case 'create':
+      case 'create': {
         // Include local ID so server uses it (offline-first architecture)
-        const { synced, ...patientData } = payload;
+        const patientData = { ...payload };
+        delete (patientData as any).synced;
 
         try {
           // Create on server with local ID
@@ -210,28 +259,26 @@ class SyncService {
             console.log(`Patient ${entityId} created on server with matching ID`);
           }
         } catch (error: any) {
-          // Check if it's a duplicate phone number error (400)
-          if (error?.response?.status === 400 && error?.response?.data?.error?.includes('phone number')) {
-            console.log(`Patient with phone ${patientData.phone} already exists on server, cleaning up local entry`);
-
-            // Delete the local patient that failed to sync
-            await patientsDb.delete(entityId);
-
-            // Remove from sync queue to prevent retrying
-            await syncQueueDb.removeByEntityId('patient', entityId);
-
-            console.log(`Cleaned up local patient ${entityId} that already exists on server`);
-            return; // Don't throw error, consider it handled
+          if (this.isDuplicatePatientPhoneApiError(error)) {
+            console.log(`Patient with phone ${patientData.phone} already exists on server, reconciling by phone`);
+            const reconciled = await this.reconcilePatientByPhone(entityId, patientData.phone);
+            if (reconciled) {
+              return;
+            }
           }
 
-          // Re-throw other errors
           throw error;
         }
         break;
+      }
 
-      case 'update':
+      case 'update': {
         // Remove fields that shouldn't be sent in update
-        const { id: updateId, synced: updateSynced, createdAt: updateCreatedAt, updatedAt: updateUpdatedAt, ...updateData } = payload;
+        const updateData = { ...payload };
+        delete (updateData as any).id;
+        delete (updateData as any).synced;
+        delete (updateData as any).createdAt;
+        delete (updateData as any).updatedAt;
 
         // Update on server
         await patientsApi.updatePatient(entityId, updateData);
@@ -239,6 +286,7 @@ class SyncService {
         await patientsDb.markAsSynced(entityId);
         console.log(`Patient ${entityId} updated on server`);
         break;
+      }
 
       case 'delete':
         // Delete on server
@@ -290,6 +338,52 @@ class SyncService {
   async clearPatientSyncQueue(patientId: string): Promise<void> {
     await syncQueueDb.removeByEntityId('patient', patientId);
     console.log(`Cleared sync queue for patient ${patientId}`);
+  }
+
+  /**
+   * Queue a switch creation (and optional consent) for sync when offline
+   */
+  async queueSwitchCreate(
+    createRequest: CreateSwitchRequest,
+    consentRequest?: ConsentRequest
+  ): Promise<void> {
+    await syncQueueDb.add({
+      entityType: 'switch',
+      // We don't have a local switch table yet, so we use patientId
+      // purely as a grouping key for this queued operation.
+      entityId: createRequest.patientId,
+      action: 'create',
+      payload: JSON.stringify({ createRequest, consentRequest }),
+    });
+
+    console.log(`Queued switch create for patient ${createRequest.patientId}`);
+
+    const state = await NetInfo.fetch();
+    if (state.isConnected) {
+      this.syncAll().catch(console.error);
+    }
+  }
+
+  /**
+   * Queue a follow-up creation for sync when offline
+   */
+  async queueFollowUpCreate(
+    appointmentId: string,
+    data: FollowUpRequest
+  ): Promise<void> {
+    await syncQueueDb.add({
+      entityType: 'followUp',
+      entityId: appointmentId,
+      action: 'create',
+      payload: JSON.stringify({ appointmentId, data }),
+    });
+
+    console.log(`Queued follow-up for appointment ${appointmentId}`);
+
+    const state = await NetInfo.fetch();
+    if (state.isConnected) {
+      this.syncAll().catch(console.error);
+    }
   }
 
   /**
@@ -404,6 +498,97 @@ class SyncService {
     } catch (error) {
       console.error('Error clearing failed sync items:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Sync switch entity (currently supports create with optional consent)
+   */
+  private async syncSwitch(
+    action: 'create' | 'update' | 'delete' | 'updateConsent',
+    entityId: string,
+    payload: any
+  ): Promise<void> {
+    switch (action) {
+      case 'create': {
+        const { createRequest, consentRequest } = payload as {
+          createRequest: CreateSwitchRequest;
+          consentRequest?: ConsentRequest;
+        };
+
+        const result = await switchesApi.createSwitch(createRequest);
+
+        if (consentRequest) {
+          await switchesApi.recordConsent(result.switch.id, consentRequest);
+        }
+
+        console.log(`Switch for patient ${createRequest.patientId} synced successfully`);
+        break;
+      }
+      case 'updateConsent': {
+        const { switchId, consentRequest } = payload as {
+          switchId: string;
+          consentRequest: ConsentRequest;
+        };
+
+        await switchesApi.recordConsent(switchId, consentRequest);
+        console.log(`Consent updated for switch ${switchId}`);
+        break;
+      }
+      default:
+        console.warn(`Unsupported switch sync action: ${action}`);
+    }
+  }
+
+  /**
+   * Sync follow-up entity (currently supports create)
+   */
+  private async syncFollowUp(
+    action: 'create' | 'update' | 'delete',
+    entityId: string,
+    payload: any
+  ): Promise<void> {
+    switch (action) {
+      case 'create': {
+        const { appointmentId, data } = payload as {
+          appointmentId: string;
+          data: FollowUpRequest;
+        };
+
+        await switchesApi.recordFollowUp(appointmentId, data);
+        console.log(`Follow-up for appointment ${appointmentId} synced successfully`);
+        break;
+      }
+      default:
+        console.warn(`Unsupported follow-up sync action: ${action}`);
+    }
+  }
+
+  /**
+   * Sync appointment entity (currently supports create/update)
+   */
+  private async syncAppointment(
+    action: 'create' | 'update' | 'delete',
+    entityId: string,
+    _payload: any
+  ): Promise<void> {
+    switch (action) {
+      case 'create': {
+        // Appointments are currently created server-side when a switch is created.
+        // This branch is reserved for future explicit appointment creation via sync.
+        console.warn(`Appointment create via sync is not yet implemented (id: ${entityId})`);
+        break;
+      }
+      case 'update': {
+        // Placeholder for future appointment reschedule/status updates via sync.
+        console.warn(`Appointment update via sync is not yet implemented (id: ${entityId})`);
+        break;
+      }
+      case 'delete': {
+        // No explicit delete flow for appointments in current app.
+        console.warn(`Appointment delete via sync is not supported (id: ${entityId})`);
+        break;
+      }
     }
   }
 }

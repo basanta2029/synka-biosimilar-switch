@@ -14,7 +14,7 @@ interface LanguageState {
   loadLanguage: () => Promise<void>;
 }
 
-export const useLanguageStore = create<LanguageState>((set, get) => ({
+export const useLanguageStore = create<LanguageState>((set, _get) => ({
   currentLanguage: 'en',
   isLoading: false,
 

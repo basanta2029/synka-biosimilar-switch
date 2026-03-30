@@ -43,7 +43,7 @@ export class PatientController {
    */
   async createPatient(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name, phone, dateOfBirth, language, allergies } = req.body;
+      const { id, name, phone, dateOfBirth, language, allergies, diagnosis } = req.body;
 
       // Validation
       if (!name || !phone || !dateOfBirth || !language) {
@@ -54,11 +54,13 @@ export class PatientController {
       }
 
       const patient = await patientService.createPatient({
+        id,
         name,
         phone,
         dateOfBirth: new Date(dateOfBirth),
         language,
         allergies,
+        diagnosis,
       });
 
       res.status(201).json({ patient });

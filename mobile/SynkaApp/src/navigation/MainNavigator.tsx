@@ -37,7 +37,7 @@ const MainNavigator = () => {
         component={DashboardScreen}
         options={{
           tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
+        tabBarIcon: ({ color, size: _size }) => (
             <Icon name="bar-chart-2" size={22} color={color} />
           ),
           headerShown: true,
@@ -59,7 +59,7 @@ const MainNavigator = () => {
         component={PatientsNavigator}
         options={{
           tabBarLabel: 'Patients',
-          tabBarIcon: ({ color, size }) => (
+        tabBarIcon: ({ color, size: _size }) => (
             <Icon name="users" size={22} color={color} />
           ),
         }}
@@ -69,7 +69,7 @@ const MainNavigator = () => {
         component={AppointmentsScreen}
         options={{
           tabBarLabel: 'Follow-ups',
-          tabBarIcon: ({ color, size }) => (
+        tabBarIcon: ({ color, size: _size }) => (
             <Icon name="calendar" size={22} color={color} />
           ),
           headerShown: true,
@@ -91,7 +91,7 @@ const MainNavigator = () => {
         component={ProfileScreen}
         options={{
           tabBarLabel: 'Settings',
-          tabBarIcon: ({ color, size }) => (
+        tabBarIcon: ({ color, size: _size }) => (
             <Icon name="settings" size={22} color={color} />
           ),
           headerShown: true,

@@ -12,6 +12,27 @@ export const STORAGE_KEYS = {
   LAST_SYNC: '@synka:last_sync',
 };
 
+// Clinical deployment profile
+export const CLINICAL_PROFILE = {
+  id: 'GHANA_PROTOTYPE',
+  label: 'Ghana Prototype',
+  region: 'Ghana',
+  notes: 'Prototype workflow aligned to Ghana-focused biosimilar use-cases and NHIS 2025 matching logic.',
+};
+
+// Active ingredients for BRAND drugs seeded in backend `drugService.seedDrugs()` (Ghana prototype catalog).
+// Switch workflow filters API results to this set so the picker matches server data without showing stray types.
+export const GHANA_TARGET_INGREDIENTS = [
+  'adalimumab',
+  'infliximab',
+  'etanercept',
+  'trastuzumab',
+  'filgrastim',
+  'rituximab',
+  'ranibizumab',
+  'epoetin', // matches seeded "epoetin alfa"
+];
+
 // Professional Medical Theme Colors
 export const COLORS = {
   // Primary palette - Medical teal/blue
@@ -163,54 +184,46 @@ export const DB_CONFIG = {
 // CLINICAL DATA - Diagnoses & Allergies
 // ===========================================
 
-// Diagnoses relevant to biosimilar medications
-// Mapped to drug indications for eligibility checking
+// Ghana-focused prototype diagnoses for biosimilar workflow
+// Mapped to therapeutic classes for eligibility guidance
 export const DIAGNOSES = [
-  // Inflammatory/Autoimmune (TNF-Blocker indications)
-  { code: 'RHEUMATOID_ARTHRITIS', label: 'Rheumatoid Arthritis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
-  { code: 'PSORIATIC_ARTHRITIS', label: 'Psoriatic Arthritis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
-  { code: 'ANKYLOSING_SPONDYLITIS', label: 'Ankylosing Spondylitis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
-  { code: 'JUVENILE_IDIOPATHIC_ARTHRITIS', label: 'Juvenile Idiopathic Arthritis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
+  // Autoimmune/Inflammatory
+  { code: 'RHEUMATOID_ARTHRITIS', label: 'Rheumatoid Arthritis (RA)', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
   { code: 'CROHNS_DISEASE', label: "Crohn's Disease", category: 'Gastrointestinal', drugClasses: ['TNF-Blocker'] },
   { code: 'ULCERATIVE_COLITIS', label: 'Ulcerative Colitis', category: 'Gastrointestinal', drugClasses: ['TNF-Blocker'] },
-  { code: 'PLAQUE_PSORIASIS', label: 'Plaque Psoriasis', category: 'Dermatologic', drugClasses: ['TNF-Blocker'] },
-  { code: 'HIDRADENITIS_SUPPURATIVA', label: 'Hidradenitis Suppurativa', category: 'Dermatologic', drugClasses: ['TNF-Blocker'] },
-  { code: 'UVEITIS', label: 'Uveitis', category: 'Ophthalmologic', drugClasses: ['TNF-Blocker'] },
+  { code: 'PSORIATIC_ARTHRITIS', label: 'Psoriatic Arthritis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
+  { code: 'ANKYLOSING_SPONDYLITIS', label: 'Ankylosing Spondylitis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
 
-  // Oncology (HER2-Blocker & G-CSF indications)
+  // Oncology/Hematology
   { code: 'HER2_BREAST_CANCER', label: 'HER2+ Breast Cancer', category: 'Oncology', drugClasses: ['HER2-Blocker'] },
   { code: 'HER2_GASTRIC_CANCER', label: 'HER2+ Gastric Cancer', category: 'Oncology', drugClasses: ['HER2-Blocker'] },
+  { code: 'NON_HODGKIN_LYMPHOMA', label: 'Non-Hodgkin Lymphoma', category: 'Hematologic', drugClasses: ['Anti-CD20'] },
   { code: 'CHEMOTHERAPY_NEUTROPENIA', label: 'Chemotherapy-Induced Neutropenia', category: 'Oncology', drugClasses: ['G-CSF'] },
-  { code: 'BONE_MARROW_TRANSPLANT', label: 'Bone Marrow Transplant', category: 'Oncology', drugClasses: ['G-CSF'] },
-  { code: 'SEVERE_CHRONIC_NEUTROPENIA', label: 'Severe Chronic Neutropenia', category: 'Hematologic', drugClasses: ['G-CSF'] },
+  { code: 'CKD_ANEMIA', label: 'Anemia of Chronic Kidney Disease', category: 'Renal', drugClasses: ['Erythropoietin'] },
 
-  // Other
+  // Ophthalmology
+  { code: 'DIABETIC_MACULAR_EDEMA', label: 'Diabetic Macular Edema', category: 'Ophthalmologic', drugClasses: ['Anti-VEGF'] },
+  { code: 'AGE_RELATED_MACULAR_DEGENERATION', label: 'Age-related Macular Degeneration', category: 'Ophthalmologic', drugClasses: ['Anti-VEGF'] },
+
+  // Fallback
   { code: 'OTHER', label: 'Other (specify in notes)', category: 'Other', drugClasses: [] },
 ];
 
-// Common allergies relevant to biologic medications
+// Ghana-focused prototype allergy list for biologic switch checks
 export const ALLERGIES = [
-  // Drug-specific allergies (active ingredients)
-  { code: 'ADALIMUMAB', label: 'Adalimumab (Humira)', category: 'Biologic Drug', relatedDrugs: ['Humira', 'Amjevita', 'Cyltezo', 'Hadlima', 'Hyrimoz', 'Yuflyma'] },
-  { code: 'INFLIXIMAB', label: 'Infliximab (Remicade)', category: 'Biologic Drug', relatedDrugs: ['Remicade', 'Inflectra', 'Renflexis', 'Avsola'] },
-  { code: 'ETANERCEPT', label: 'Etanercept (Enbrel)', category: 'Biologic Drug', relatedDrugs: ['Enbrel'] },
-  { code: 'TRASTUZUMAB', label: 'Trastuzumab (Herceptin)', category: 'Biologic Drug', relatedDrugs: ['Herceptin', 'Ogivri', 'Herzuma', 'Kanjinti'] },
-  { code: 'FILGRASTIM', label: 'Filgrastim (Neupogen)', category: 'Biologic Drug', relatedDrugs: ['Neupogen', 'Zarxio', 'Nivestym'] },
+  // Biologic ingredients
+  { code: 'ADALIMUMAB', label: 'Adalimumab', category: 'Biologic Drug', relatedDrugs: ['Humira', 'Amjevita', 'Cyltezo', 'Hadlima', 'Hyrimoz', 'Yuflyma'] },
+  { code: 'RITUXIMAB', label: 'Rituximab', category: 'Biologic Drug', relatedDrugs: ['MabThera', 'Truxima'] },
+  { code: 'TRASTUZUMAB', label: 'Trastuzumab', category: 'Biologic Drug', relatedDrugs: ['Herceptin', 'Ogivri'] },
+  { code: 'RANIBIZUMAB', label: 'Ranibizumab', category: 'Biologic Drug', relatedDrugs: ['Lucentis', 'BioUcenta'] },
+  { code: 'EPOETIN', label: 'Epoetin alfa', category: 'Biologic Drug', relatedDrugs: ['Eprex', 'Binocrit'] },
+  { code: 'FILGRASTIM', label: 'Filgrastim', category: 'Biologic Drug', relatedDrugs: ['Neupogen', 'Zarxio', 'Nivestym'] },
 
-  // Common excipient/formulation allergies
+  // Excipients/materials/proteins
   { code: 'LATEX', label: 'Latex', category: 'Material', relatedDrugs: [] },
-  { code: 'RUBBER', label: 'Rubber (needle covers)', category: 'Material', relatedDrugs: [] },
   { code: 'POLYSORBATE', label: 'Polysorbate 80', category: 'Excipient', relatedDrugs: [] },
-  { code: 'SUCROSE', label: 'Sucrose', category: 'Excipient', relatedDrugs: [] },
-  { code: 'MANNITOL', label: 'Mannitol', category: 'Excipient', relatedDrugs: [] },
-  { code: 'CITRATE', label: 'Citrate Buffer', category: 'Excipient', relatedDrugs: [] },
-
-  // Protein allergies
-  { code: 'MURINE_PROTEINS', label: 'Murine (Mouse) Proteins', category: 'Protein', relatedDrugs: ['Remicade', 'Inflectra', 'Renflexis', 'Avsola'] },
-  { code: 'CHO_PROTEINS', label: 'CHO Cell Proteins', category: 'Protein', relatedDrugs: [] },
+  { code: 'MURINE_PROTEINS', label: 'Murine (Mouse) Proteins', category: 'Protein', relatedDrugs: ['Rituximab', 'Infliximab'] },
   { code: 'ECOLI_PROTEINS', label: 'E. coli Proteins', category: 'Protein', relatedDrugs: ['Neupogen', 'Zarxio', 'Nivestym'] },
-
-  // General
   { code: 'NKDA', label: 'No Known Drug Allergies', category: 'None', relatedDrugs: [] },
   { code: 'OTHER', label: 'Other (specify in notes)', category: 'Other', relatedDrugs: [] },
 ];
@@ -219,10 +232,10 @@ export const ALLERGIES = [
 export const DIAGNOSIS_CATEGORIES = [
   { code: 'Autoimmune', label: 'Autoimmune/Inflammatory' },
   { code: 'Gastrointestinal', label: 'Gastrointestinal' },
-  { code: 'Dermatologic', label: 'Dermatologic' },
   { code: 'Ophthalmologic', label: 'Ophthalmologic' },
   { code: 'Oncology', label: 'Oncology' },
   { code: 'Hematologic', label: 'Hematologic' },
+  { code: 'Renal', label: 'Renal' },
   { code: 'Other', label: 'Other' },
 ];
 

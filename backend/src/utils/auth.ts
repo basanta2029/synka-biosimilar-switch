@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import type { Secret, SignOptions } from 'jsonwebtoken';
 import { config } from '../config';
 
 /**
@@ -28,9 +29,11 @@ export const generateToken = (payload: {
   email: string;
   role: string;
 }): string => {
-  return jwt.sign(payload, config.jwtSecret, {
-    expiresIn: config.jwtExpiresIn,
-  });
+  const secret: Secret = config.jwtSecret;
+  const signOptions: SignOptions = {
+    expiresIn: config.jwtExpiresIn as SignOptions['expiresIn'],
+  };
+  return jwt.sign(payload, secret, signOptions);
 };
 
 /**

@@ -1,0 +1,39 @@
+{
+  "sourceVersion": "NHIS Medicines List 2025 Version 1.0",
+  "lastReviewedAt": "2026-03-23",
+  "notes": "Generated from nhis2025-medicines-extract.json. Coverage should be validated against full NHIS sheet and Ghana FDA records before production use.",
+  "ingredients": {
+    "rituximab": {
+      "verificationStatus": "MATCHED_NHIS_2025",
+      "isListed": true,
+      "notes": "Matched to NHIS by generic ingredient.",
+      "pricing": {
+        "nhisCode": "RITUXIIN1",
+        "genericName": "Rituximab Injection 100mg/10ml",
+        "unitOfPricing": "Vial",
+        "priceGhs": 2300,
+        "levelOfPrescribing": "SM"
+      }
+    },
+    "trastuzumab": {
+      "verificationStatus": "NOT_FOUND_IN_NHIS_2025",
+      "isListed": false,
+      "notes": "Not found in current NHIS 2025 extract; keep as unverified candidate."
+    },
+    "adalimumab": {
+      "verificationStatus": "NOT_FOUND_IN_NHIS_2025",
+      "isListed": false,
+      "notes": "Not found in current NHIS 2025 extract; keep as unverified candidate."
+    },
+    "epoetin": {
+      "verificationStatus": "NOT_FOUND_IN_NHIS_2025",
+      "isListed": false,
+      "notes": "Not found in current NHIS 2025 extract; keep as unverified candidate."
+    },
+    "ranibizumab": {
+      "verificationStatus": "NOT_FOUND_IN_NHIS_2025",
+      "isListed": false,
+      "notes": "Not found in current NHIS 2025 extract; keep as unverified candidate."
+    }
+  }
+}

@@ -10,14 +10,29 @@ import {
   TextInput,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
+import NetInfo from '@react-native-community/netinfo';
+import {
+  COLORS,
+  SPACING,
+  TYPOGRAPHY,
+  BORDER_RADIUS,
+  CLINICAL_PROFILE,
+  GHANA_TARGET_INGREDIENTS,
+} from '../../constants';
 import { switchesApi } from '../../api/switches';
 import { Drug, BiosimilarWithSavings, EligibilityResult } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { syncService } from '../../services/syncService';
 
 type Props = NativeStackScreenProps<any, 'SwitchWorkflow'>;
 
-type Step = 'SELECT_DRUG' | 'ELIGIBILITY' | 'SELECT_BIOSIMILAR' | 'CONSENT' | 'CONFIRMATION';
+type Step =
+  | 'SELECT_DRUG'
+  | 'ELIGIBILITY'
+  | 'SELECT_BIOSIMILAR'
+  | 'SCHEDULE'
+  | 'CONSENT'
+  | 'CONFIRMATION';
 
 const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
   const { patientId } = route.params;
@@ -30,6 +45,23 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
   const [selectedBiosimilar, setSelectedBiosimilar] = useState<BiosimilarWithSavings | null>(null);
   const [consentText, setConsentText] = useState('');
   const [createdSwitch, setCreatedSwitch] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [specialistVerified, setSpecialistVerified] = useState(false);
+  const [nhisChecked, setNhisChecked] = useState(false);
+  const [stabilityReviewed, setStabilityReviewed] = useState(false);
+
+  // Simple appointment schedule state (initial/day3/day14)
+  const [initialDate] = useState<Date>(new Date());
+  const [day3Date] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d;
+  });
+  const [day14Date] = useState<Date>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 14);
+    return d;
+  });
 
   // Load brand drugs on mount
   useEffect(() => {
@@ -40,8 +72,13 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     setIsLoading(true);
     try {
       const response = await switchesApi.getDrugs('BRAND');
-      setBrandDrugs(response.drugs);
+      const ghanaBrandDrugs = response.drugs.filter((drug: Drug) => {
+        const ingredient = (drug.activeIngredient || '').toLowerCase();
+        return GHANA_TARGET_INGREDIENTS.some(target => ingredient.includes(target));
+      });
+      setBrandDrugs(ghanaBrandDrugs);
     } catch (error: any) {
+      console.error('Failed to load medications', error);
       Alert.alert('Error', 'Failed to load medications');
     } finally {
       setIsLoading(false);
@@ -52,11 +89,22 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     setSelectedBrandDrug(drug);
     setIsLoading(true);
     try {
+      const netState = await NetInfo.fetch();
+      if (netState.isConnected) {
+        await syncService.syncAll();
+      }
       const result = await switchesApi.checkEligibility(patientId, drug.id);
       setEligibilityResult(result);
       setCurrentStep('ELIGIBILITY');
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to check eligibility');
+      console.error('Failed to check eligibility', error);
+      const apiMessage = error?.response?.data?.message;
+      Alert.alert(
+        'Error',
+        apiMessage ||
+          error.message ||
+          'Failed to check eligibility. If this patient was created offline, connect and sync, then try again.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -67,37 +115,90 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     // Pre-populate consent text
     setConsentText(
       `I consent to switching from ${selectedBrandDrug?.name} to ${biosimilar.name}. ` +
-      `I understand that ${biosimilar.name} is a Ghana Food and Drugs Authority (Ghana FDA)–approved biosimilar medicine ` +
+      `I understand that ${biosimilar.name} is an approved biosimilar medicine ` +
       `and that my clinic has decided this switch will provide the same therapeutic benefit at a lower cost.`
     );
-    setCurrentStep('CONSENT');
+    setCurrentStep('SCHEDULE');
   };
 
-  const handleRecordConsent = async () => {
-    if (!selectedBrandDrug || !selectedBiosimilar) return;
+  const handleSubmitSwitch = async () => {
+    if (!selectedBrandDrug || !selectedBiosimilar) {
+      return;
+    }
 
-    setIsLoading(true);
+    if (!specialistVerified || !nhisChecked || !stabilityReviewed) {
+      Alert.alert(
+        'Checklist Required',
+        'Please complete the Ghana clinical checklist before submitting the switch.'
+      );
+      return;
+    }
+
+    if (!consentText.trim()) {
+      Alert.alert('Consent Required', 'Please review and confirm the consent statement.');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      // Create switch
-      const switchResult = await switchesApi.createSwitch({
+      const createRequest = {
         patientId,
         fromDrugId: selectedBrandDrug.id,
         toDrugId: selectedBiosimilar.id,
-        eligibilityNotes: eligibilityResult?.reasons.join('; '),
-      });
+        eligibilityNotes: [
+          ...(eligibilityResult?.reasons || []),
+          `CLINICAL_PROFILE=${CLINICAL_PROFILE.id}`,
+          'SPECIALIST_INITIATION_CONFIRMED=true',
+          'NHIS_REIMBURSEMENT_CHECKED=true',
+          'CLINICAL_STABILITY_REVIEWED=true',
+        ].join('; '),
+        // Optional schedule metadata for backend to use when available
+        schedule: {
+          initial: initialDate.toISOString(),
+          day3: day3Date.toISOString(),
+          day14: day14Date.toISOString(),
+        },
+      };
 
-      // Record consent
-      const consentResult = await switchesApi.recordConsent(switchResult.switch.id, {
+      const consentRequest = {
         consentText,
         consentObtained: true,
-      });
+      };
 
-      setCreatedSwitch(consentResult.switch);
-      setCurrentStep('CONFIRMATION');
+      const netState = await NetInfo.fetch();
+
+      if (netState.isConnected) {
+        // Online: create switch immediately
+        const switchResult = await switchesApi.createSwitch(createRequest as any);
+        const consentResult = await switchesApi.recordConsent(
+          switchResult.switch.id,
+          consentRequest
+        );
+        setCreatedSwitch(consentResult.switch);
+        setCurrentStep('CONFIRMATION');
+      } else {
+        // Offline: queue for later sync
+        await syncService.queueSwitchCreate(createRequest as any, consentRequest);
+        Alert.alert(
+          'Offline',
+          'Switch created locally – will sync when online.'
+        );
+        setCreatedSwitch({
+          fromDrug: selectedBrandDrug,
+          toDrug: selectedBiosimilar,
+          status: 'PENDING',
+          appointments: [
+            { id: 'INITIAL', appointmentType: 'INITIAL', scheduledAt: initialDate.toISOString() },
+            { id: 'DAY_3', appointmentType: 'DAY_3', scheduledAt: day3Date.toISOString() },
+            { id: 'DAY_14', appointmentType: 'DAY_14', scheduledAt: day14Date.toISOString() },
+          ],
+        });
+        setCurrentStep('CONFIRMATION');
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create switch');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -109,20 +210,40 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     }).format(amount);
   };
 
+  const formatNhisStatus = (biosimilar: BiosimilarWithSavings) => {
+    const status = biosimilar.nhisCoverage?.verificationStatus;
+    if (status === 'MATCHED_NHIS_2025') {
+      return 'NHIS 2025 MATCHED';
+    }
+    if (status === 'NEEDS_MANUAL_REVIEW') {
+      return 'NHIS REVIEW NEEDED';
+    }
+    return 'NOT IN NHIS 2025';
+  };
+
+  const formatMessage = (message: string) => {
+    const [code, ...rest] = message.split(':');
+    if (!rest.length) return message;
+    const label = code.replace(/_/g, ' ');
+    return `${label}: ${rest.join(':').trim()}`;
+  };
+
   const renderStepIndicator = () => {
     const steps = [
       { label: 'Drug', icon: 'package' },
       { label: 'Eligibility', icon: 'check-square' },
       { label: 'Biosimilar', icon: 'shuffle' },
+      { label: 'Schedule', icon: 'calendar' },
       { label: 'Consent', icon: 'file-text' },
-      { label: 'Done', icon: 'check-circle' },
+      { label: 'Summary', icon: 'check-circle' },
     ];
     const stepMap: Record<Step, number> = {
       'SELECT_DRUG': 0,
       'ELIGIBILITY': 1,
       'SELECT_BIOSIMILAR': 2,
-      'CONSENT': 3,
-      'CONFIRMATION': 4,
+      'SCHEDULE': 3,
+      'CONSENT': 4,
+      'CONFIRMATION': 5,
     };
     const currentIndex = stepMap[currentStep];
 
@@ -158,8 +279,14 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Select Current Medication</Text>
       <Text style={styles.stepDescription}>
-        Choose the brand medication the patient is currently taking
+        {CLINICAL_PROFILE.label}: choose the current brand biologic for this Ghana-focused workflow
       </Text>
+      <View style={styles.profileBanner}>
+        <Icon name="map-pin" size={14} color={COLORS.primary} />
+        <Text style={styles.profileBannerText}>
+          Active profile: {CLINICAL_PROFILE.label} ({CLINICAL_PROFILE.region})
+        </Text>
+      </View>
 
       {brandDrugs.map((drug) => (
         <TouchableOpacity
@@ -228,7 +355,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
               {eligibilityResult.warnings.map((warning, index) => (
                 <View key={index} style={styles.bulletItem}>
                   <View style={styles.bulletDot} />
-                  <Text style={styles.warningText}>{warning}</Text>
+                  <Text style={styles.warningText}>{formatMessage(warning)}</Text>
                 </View>
               ))}
             </View>
@@ -243,7 +370,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
               {eligibilityResult.reasons.map((reason, index) => (
                 <View key={index} style={styles.bulletItem}>
                   <View style={[styles.bulletDot, { backgroundColor: COLORS.secondary }]} />
-                  <Text style={styles.infoText}>{reason}</Text>
+                  <Text style={styles.infoText}>{formatMessage(reason)}</Text>
                 </View>
               ))}
             </View>
@@ -269,7 +396,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Select Biosimilar</Text>
       <Text style={styles.stepDescription}>
-        Choose the Ghana FDA–approved biosimilar option your clinic recommends for this patient
+        Choose a Ghana prototype biosimilar option. NHIS-matched entries show verified NHIS 2025 pricing.
       </Text>
 
       {eligibilityResult?.recommendedBiosimilars.map((biosimilar) => (
@@ -295,6 +422,23 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
               <Text style={styles.savingsPercent}>{biosimilar.savingsPercent}% OFF</Text>
             </View>
           </View>
+          <View style={styles.nhisTagRow}>
+            <View
+              style={[
+                styles.nhisTag,
+                biosimilar.nhisCoverage?.isListed ? styles.nhisTagMatched : styles.nhisTagUnmatched,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.nhisTagText,
+                  biosimilar.nhisCoverage?.isListed ? styles.nhisTagTextMatched : styles.nhisTagTextUnmatched,
+                ]}
+              >
+                {formatNhisStatus(biosimilar)}
+              </Text>
+            </View>
+          </View>
 
           <Text style={styles.drugIngredient}>
             {biosimilar.activeIngredient} • {biosimilar.manufacturer}
@@ -302,9 +446,13 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
 
           <View style={styles.savingsRow}>
             <View style={styles.savingsItem}>
-              <Text style={styles.savingsLabel}>New Cost</Text>
+              <Text style={styles.savingsLabel}>
+                {biosimilar.nhisCoverage?.isListed ? 'NHIS Cost' : 'Prototype Cost'}
+              </Text>
               <Text style={styles.savingsValue}>
-                {formatCurrency(biosimilar.costPerMonth)}/mo
+                {biosimilar.nhisCoverage?.pricing?.priceGhs != null
+                  ? `${formatCurrency(biosimilar.nhisCoverage.pricing.priceGhs)}/${biosimilar.nhisCoverage.pricing.unitOfPricing}`
+                  : `${formatCurrency(biosimilar.costPerMonth)}/mo`}
               </Text>
             </View>
             <View style={styles.savingsItem}>
@@ -322,6 +470,107 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </TouchableOpacity>
       ))}
+    </View>
+  );
+
+  const renderScheduleStep = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Schedule Follow-ups</Text>
+      <Text style={styles.stepDescription}>
+        Confirm the initial visit and automatic day 3/day 14 follow-up schedule.
+      </Text>
+
+      <View style={styles.currentDrugCard}>
+        <View style={styles.sectionHeader}>
+          <Icon name="calendar" size={16} color={COLORS.textSecondary} />
+          <Text style={styles.sectionTitle}>Appointments</Text>
+        </View>
+
+        <View style={styles.appointmentRow}>
+          <Text style={styles.appointmentLabel}>Initial Visit</Text>
+          <Text style={styles.appointmentValue}>
+            {initialDate.toLocaleDateString()} • {initialDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        <View style={styles.appointmentRow}>
+          <Text style={styles.appointmentLabel}>Day 3 Follow-up</Text>
+          <Text style={styles.appointmentValue}>
+            {day3Date.toLocaleDateString()} • {day3Date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+        <View style={styles.appointmentRow}>
+          <Text style={styles.appointmentLabel}>Day 14 Follow-up</Text>
+          <Text style={styles.appointmentValue}>
+            {day14Date.toLocaleDateString()} • {day14Date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.currentDrugCard}>
+        <View style={styles.sectionHeader}>
+          <Icon name="shield" size={16} color={COLORS.textSecondary} />
+          <Text style={styles.sectionTitle}>Ghana Prescribing Checklist</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.checklistRow}
+          onPress={() => setSpecialistVerified(!specialistVerified)}
+        >
+          <Icon
+            name={specialistVerified ? 'check-square' : 'square'}
+            size={18}
+            color={specialistVerified ? COLORS.success : COLORS.textSecondary}
+          />
+          <Text style={styles.checklistText}>
+            Specialist initiation confirmed (SM/specialist pathway)
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.checklistRow}
+          onPress={() => setNhisChecked(!nhisChecked)}
+        >
+          <Icon
+            name={nhisChecked ? 'check-square' : 'square'}
+            size={18}
+            color={nhisChecked ? COLORS.success : COLORS.textSecondary}
+          />
+          <Text style={styles.checklistText}>
+            NHIS listing/reimbursement checked for selected biosimilar
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.checklistRow}
+          onPress={() => setStabilityReviewed(!stabilityReviewed)}
+        >
+          <Icon
+            name={stabilityReviewed ? 'check-square' : 'square'}
+            size={18}
+            color={stabilityReviewed ? COLORS.success : COLORS.textSecondary}
+          />
+          <Text style={styles.checklistText}>
+            Clinical stability reviewed before switch decision
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => {
+          if (!specialistVerified || !nhisChecked || !stabilityReviewed) {
+            Alert.alert(
+              'Checklist Required',
+              'Please complete all Ghana checklist items before continuing.'
+            );
+            return;
+          }
+          setCurrentStep('CONSENT');
+        }}
+      >
+        <Text style={styles.primaryButtonText}>Continue to Consent</Text>
+        <Icon name="arrow-right" size={18} color={COLORS.surface} />
+      </TouchableOpacity>
     </View>
   );
 
@@ -368,16 +617,19 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
       </View>
 
       <TouchableOpacity
-        style={[styles.primaryButton, (!consentText || isLoading) && styles.primaryButtonDisabled]}
-        onPress={handleRecordConsent}
-        disabled={isLoading || !consentText}
+        style={[
+          styles.primaryButton,
+          (!consentText || isSubmitting) && styles.primaryButtonDisabled,
+        ]}
+        onPress={handleSubmitSwitch}
+        disabled={isSubmitting || !consentText}
       >
-        {isLoading ? (
+        {isSubmitting ? (
           <ActivityIndicator color={COLORS.surface} />
         ) : (
           <>
             <Icon name="check-circle" size={18} color={COLORS.surface} />
-            <Text style={styles.primaryButtonText}>Record Consent & Create Switch</Text>
+            <Text style={styles.primaryButtonText}>Submit Switch</Text>
           </>
         )}
       </TouchableOpacity>
@@ -460,6 +712,8 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
         return renderEligibilityStep();
       case 'SELECT_BIOSIMILAR':
         return renderSelectBiosimilarStep();
+      case 'SCHEDULE':
+        return renderScheduleStep();
       case 'CONSENT':
         return renderConsentStep();
       case 'CONFIRMATION':
@@ -485,7 +739,14 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
-            const steps: Step[] = ['SELECT_DRUG', 'ELIGIBILITY', 'SELECT_BIOSIMILAR', 'CONSENT', 'CONFIRMATION'];
+            const steps: Step[] = [
+              'SELECT_DRUG',
+              'ELIGIBILITY',
+              'SELECT_BIOSIMILAR',
+              'SCHEDULE',
+              'CONSENT',
+              'CONFIRMATION',
+            ];
             const currentIndex = steps.indexOf(currentStep);
             if (currentIndex > 0) {
               setCurrentStep(steps[currentIndex - 1]);
@@ -571,6 +832,22 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.lg,
   },
+  profileBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary + '10',
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.primary + '30',
+    padding: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  profileBannerText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: COLORS.primaryDark,
+    fontWeight: '600',
+  },
   drugCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -652,6 +929,30 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
+  },
+  appointmentRow: {
+    paddingVertical: SPACING.xs,
+  },
+  appointmentLabel: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  appointmentValue: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    color: COLORS.text,
+    fontWeight: '500',
+  },
+  checklistRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+  },
+  checklistText: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: COLORS.text,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -780,6 +1081,35 @@ const styles = StyleSheet.create({
   },
   savingsGreen: {
     color: COLORS.success,
+  },
+  nhisTagRow: {
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+  },
+  nhisTag: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    borderWidth: 1,
+  },
+  nhisTagMatched: {
+    backgroundColor: COLORS.successLight,
+    borderColor: COLORS.success,
+  },
+  nhisTagUnmatched: {
+    backgroundColor: COLORS.warningLight,
+    borderColor: COLORS.warning,
+  },
+  nhisTagText: {
+    fontSize: TYPOGRAPHY.fontSize.xs,
+    fontWeight: '700',
+  },
+  nhisTagTextMatched: {
+    color: COLORS.success,
+  },
+  nhisTagTextUnmatched: {
+    color: COLORS.warning,
   },
   switchSummary: {
     backgroundColor: COLORS.surface,
