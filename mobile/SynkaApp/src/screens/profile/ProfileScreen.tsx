@@ -125,7 +125,10 @@ const ProfileScreen = () => {
   };
 
   const getLanguageDisplay = () => {
-    return i18n.language === 'es' ? 'Español' : 'English';
+    if (i18n.language === 'tw') return 'Twi';
+    if (i18n.language === 'ga') return 'Ga';
+    if (i18n.language === 'ee') return 'Ewe';
+    return 'English';
   };
 
   const MenuItem = ({

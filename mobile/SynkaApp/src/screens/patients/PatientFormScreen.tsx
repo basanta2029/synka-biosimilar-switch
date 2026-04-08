@@ -33,7 +33,7 @@ import { PatientFormData } from '../../types';
 type Props = NativeStackScreenProps<any, 'PatientForm'>;
 
 const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { patientId } = route.params || {};
   const isEditing = !!patientId;
   const { patient, isLoading: isLoadingPatient } = usePatient(patientId || '');
@@ -78,7 +78,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
     dateOfBirth: patient?.dateOfBirth
       ? new Date(patient.dateOfBirth)
       : new Date(new Date().getFullYear() - 18, 0, 1),
-    language: patient?.language || (i18n.language === 'es' ? 'ES' : 'EN'),
+    language: patient?.language || 'EN',
     diagnosis: patient?.diagnosis || '',
     allergies: patient?.allergies
       ? patient.allergies.split(',').map((a: string) => a.trim()).filter(Boolean)

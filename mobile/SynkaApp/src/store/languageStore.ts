@@ -3,7 +3,7 @@ import i18n from '../config/i18n';
 import { storage } from '../utils/storage';
 import { STORAGE_KEYS } from '../constants';
 
-type Language = 'en' | 'es';
+type Language = 'en' | 'tw' | 'ga' | 'ee';
 
 interface LanguageState {
   currentLanguage: Language;
@@ -42,7 +42,13 @@ export const useLanguageStore = create<LanguageState>((set, _get) => ({
       // Load from storage
       const savedLanguage = await storage.getItem<Language>(STORAGE_KEYS.LANGUAGE);
 
-      if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'es')) {
+      if (
+        savedLanguage &&
+        (savedLanguage === 'en' ||
+          savedLanguage === 'tw' ||
+          savedLanguage === 'ga' ||
+          savedLanguage === 'ee')
+      ) {
         await i18n.changeLanguage(savedLanguage);
         set({ currentLanguage: savedLanguage });
       } else {

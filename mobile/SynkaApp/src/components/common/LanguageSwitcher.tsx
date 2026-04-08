@@ -13,7 +13,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'compact'
   const { setLanguage, isLoading } = useLanguageStore();
   const currentLanguage = i18n.language;
 
-  const handleLanguageChange = async (language: 'en' | 'es') => {
+  const handleLanguageChange = async (language: 'en' | 'tw' | 'ga' | 'ee') => {
     if (currentLanguage !== language && !isLoading) {
       await setLanguage(language);
     }
@@ -43,18 +43,18 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'compact'
         <TouchableOpacity
           style={[
             styles.compactButton,
-            currentLanguage === 'es' && styles.compactButtonActive,
+            currentLanguage === 'tw' && styles.compactButtonActive,
           ]}
-          onPress={() => handleLanguageChange('es')}
+          onPress={() => handleLanguageChange('tw')}
           disabled={isLoading}
         >
           <Text
             style={[
               styles.compactText,
-              currentLanguage === 'es' && styles.compactTextActive,
+              currentLanguage === 'tw' && styles.compactTextActive,
             ]}
           >
-            ES
+            TW
           </Text>
         </TouchableOpacity>
       </View>
@@ -85,18 +85,54 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'compact'
       <TouchableOpacity
         style={[
           styles.fullButton,
-          currentLanguage === 'es' && styles.fullButtonActive,
+          currentLanguage === 'tw' && styles.fullButtonActive,
         ]}
-        onPress={() => handleLanguageChange('es')}
+        onPress={() => handleLanguageChange('tw')}
         disabled={isLoading}
       >
         <Text
           style={[
             styles.fullButtonText,
-            currentLanguage === 'es' && styles.fullButtonTextActive,
+            currentLanguage === 'tw' && styles.fullButtonTextActive,
           ]}
         >
-          🇲🇽 Español
+          Twi
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.fullButton,
+          currentLanguage === 'ga' && styles.fullButtonActive,
+        ]}
+        onPress={() => handleLanguageChange('ga')}
+        disabled={isLoading}
+      >
+        <Text
+          style={[
+            styles.fullButtonText,
+            currentLanguage === 'ga' && styles.fullButtonTextActive,
+          ]}
+        >
+          Ga
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.fullButton,
+          currentLanguage === 'ee' && styles.fullButtonActive,
+        ]}
+        onPress={() => handleLanguageChange('ee')}
+        disabled={isLoading}
+      >
+        <Text
+          style={[
+            styles.fullButtonText,
+            currentLanguage === 'ee' && styles.fullButtonTextActive,
+          ]}
+        >
+          Ewe
         </Text>
       </TouchableOpacity>
     </View>
@@ -135,10 +171,11 @@ const styles = StyleSheet.create({
   // Full variant styles (for settings/profile)
   fullContainer: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.sm,
+    flexWrap: 'wrap',
   },
   fullButton: {
-    flex: 1,
+    width: '48%',
     height: 50,
     borderWidth: 1,
     borderColor: COLORS.border,

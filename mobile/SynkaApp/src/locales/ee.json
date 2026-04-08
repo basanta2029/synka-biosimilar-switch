@@ -1,0 +1,59 @@
+{
+  "common": {
+    "cancel": "Tɔ te",
+    "save": "Dzra",
+    "delete": "Tutui",
+    "edit": "Trɔ asi",
+    "submit": "Na",
+    "confirm": "Kpɔe",
+    "search": "Dii",
+    "filter": "Tia",
+    "back": "Trɔ yi",
+    "next": "Esi le edzi",
+    "previous": "Esi do ŋgɔ",
+    "loading": "Ele dzi...",
+    "error": "Vodada",
+    "success": "Ewɔ edzi",
+    "yes": "Ɛɛ",
+    "no": "Ao",
+    "ok": "OK"
+  },
+  "auth": {
+    "login": "Ge ɖe eme",
+    "register": "Ŋlɔ ŋkɔ",
+    "logout": "Do go",
+    "email": "Email",
+    "password": "Sesuame nya",
+    "name": "Ŋkɔ bliboa",
+    "confirmPassword": "Xɔ sesuname nya se",
+    "welcomeTitle": "Woezor le Synka",
+    "welcomeSubtitle": "Biosimilar Trɔtrɔ Dziwo ƒe Dɔwɔwɔ",
+    "loginButton": "Ge ɖe eme",
+    "registerButton": "Ŋlɔ ŋkɔ",
+    "noAccount": "Èwɔ akawnt o?",
+    "haveAccount": "Èwɔ akawnt xoxo?",
+    "loginFailed": "Ge ɖe eme meva o",
+    "loginError": "Vodada dzɔ le gege ɖe eme me. Taflatse gblɔe ake.",
+    "registerSuccess": "Ŋkɔŋlɔŋlɔ dzi nyuie",
+    "registerError": "Ŋkɔŋlɔŋlɔ meva o. Taflatse gblɔe ake.",
+    "logoutConfirm": "Èdi be nado goa?",
+    "emailPlaceholder": "De wò email",
+    "passwordPlaceholder": "De wò sesuname nya",
+    "namePlaceholder": "De wò ŋkɔ bliboa",
+    "confirmPasswordPlaceholder": "Xɔ wò sesuname nya se"
+  },
+  "navigation": {
+    "dashboard": "Nutsɔtsɔ Gã",
+    "patients": "Dɔlélawo",
+    "appointments": "Ɣeyiɣiwo",
+    "profile": "Wò Nyatakakawo"
+  },
+  "languages": {
+    "english": "English",
+    "twi": "Twi",
+    "ga": "Ga",
+    "ewe": "Ewe",
+    "selectLanguage": "Tia Gbɛ",
+    "changeLanguage": "Trɔ Gbɛ"
+  }
+}

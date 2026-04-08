@@ -3,14 +3,22 @@ import { initReactI18next } from 'react-i18next';
 import { storage } from '../utils/storage';
 import { STORAGE_KEYS } from '../constants';
 import en from '../locales/en.json';
-import es from '../locales/es.json';
+import tw from '../locales/tw.json';
+import ga from '../locales/ga.json';
+import ee from '../locales/ee.json';
 
 const resources = {
   en: {
     translation: en,
   },
-  es: {
-    translation: es,
+  tw: {
+    translation: tw,
+  },
+  ga: {
+    translation: ga,
+  },
+  ee: {
+    translation: ee,
   },
 };
 

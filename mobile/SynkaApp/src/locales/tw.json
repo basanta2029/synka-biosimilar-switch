@@ -1,0 +1,59 @@
+{
+  "common": {
+    "cancel": "Twa mu",
+    "save": "Sie",
+    "delete": "Yi fi hɔ",
+    "edit": "Sesa",
+    "submit": "Fa kɔ",
+    "confirm": "Pene so",
+    "search": "Hwehwɛ",
+    "filter": "Yi mu",
+    "back": "San kɔ",
+    "next": "Deɛ edi hɔ",
+    "previous": "Deɛ etwaam",
+    "loading": "Eregu so...",
+    "error": "Mfomso",
+    "success": "Ayɛ yiye",
+    "yes": "Yiw",
+    "no": "Daabi",
+    "ok": "OK"
+  },
+  "auth": {
+    "login": "Kɔ mu",
+    "register": "Kyerɛw din",
+    "logout": "Fi mu",
+    "email": "Email",
+    "password": "Ahintasɛm",
+    "name": "Din mũ",
+    "confirmPassword": "Si ahintasɛm no so bio",
+    "welcomeTitle": "Akwaaba ba Synka mu",
+    "welcomeSubtitle": "Biosimilar Nsesa Sohwɛ Nhyehyɛe",
+    "loginButton": "Kɔ mu",
+    "registerButton": "Kyerɛw din",
+    "noAccount": "Wo nni akawnt bi?",
+    "haveAccount": "Wowɔ akawnt dedaw?",
+    "loginFailed": "Kɔ mu no antumi",
+    "loginError": "Mfomso bi aba bere a worekɔ mu. Yɛsrɛ wo san yɛ bio.",
+    "registerSuccess": "Kyerɛw din no ayɛ yiye",
+    "registerError": "Kyerɛw din no antumi. Yɛsrɛ wo san yɛ bio.",
+    "logoutConfirm": "Wopɛ sɛ wufi mu ampa?",
+    "emailPlaceholder": "Hyɛ wo email",
+    "passwordPlaceholder": "Hyɛ wo ahintasɛm",
+    "namePlaceholder": "Hyɛ wo din mũ",
+    "confirmPasswordPlaceholder": "Si wo ahintasɛm no so bio"
+  },
+  "navigation": {
+    "dashboard": "Nkyerɛkyerɛmu Pon",
+    "patients": "Ayarefo",
+    "appointments": "Nhyiam",
+    "profile": "Wo Ho Nsɛm"
+  },
+  "languages": {
+    "english": "English",
+    "twi": "Twi",
+    "ga": "Ga",
+    "ewe": "Ewe",
+    "selectLanguage": "Yi Kasa",
+    "changeLanguage": "Sesa Kasa"
+  }
+}

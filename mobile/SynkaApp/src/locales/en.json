@@ -110,7 +110,9 @@
   },
   "languages": {
     "english": "English",
-    "spanish": "Español",
+    "twi": "Twi",
+    "ga": "Ga",
+    "ewe": "Ewe",
     "selectLanguage": "Select Language",
     "changeLanguage": "Change Language"
   },

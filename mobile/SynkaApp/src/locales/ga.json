@@ -1,0 +1,59 @@
+{
+  "common": {
+    "cancel": "Tso",
+    "save": "Sie",
+    "delete": "Boo kɛ",
+    "edit": "Sesa",
+    "submit": "Kɛ",
+    "confirm": "Pɛ",
+    "search": "Hii",
+    "filter": "Yitso",
+    "back": "Yɛko",
+    "next": "Nɔ fɛɛ",
+    "previous": "Nɔ ko",
+    "loading": "Eba...",
+    "error": "Mfomso",
+    "success": "Eji",
+    "yes": "Aane",
+    "no": "Ao",
+    "ok": "OK"
+  },
+  "auth": {
+    "login": "Nɔngmɔ",
+    "register": "Kɛji ŋkɛ",
+    "logout": "Bɔ mli",
+    "email": "Email",
+    "password": "Kpashimo",
+    "name": "Aŋa mli",
+    "confirmPassword": "Si kpashimo hewalɛ",
+    "welcomeTitle": "Akwaaba ba Synka",
+    "welcomeSubtitle": "Biosimilar Nsesa Kpeeji",
+    "loginButton": "Nɔngmɔ",
+    "registerButton": "Kɛji ŋkɛ",
+    "noAccount": "Ohe akawnt baa?",
+    "haveAccount": "Ohe akawnt ni?",
+    "loginFailed": "Nɔngmɔ hewalɛ",
+    "loginError": "Mfomso ba nɔngmɔ mli. Mepa wo kyɛw, san yɛ bio.",
+    "registerSuccess": "Kɛji ŋkɛ eji",
+    "registerError": "Kɛji ŋkɛ hewalɛ. Mepa wo kyɛw, san yɛ bio.",
+    "logoutConfirm": "Oshɛ lɛ obɔ mli ampa?",
+    "emailPlaceholder": "Hyɛ wo email",
+    "passwordPlaceholder": "Hyɛ wo kpashimo",
+    "namePlaceholder": "Hyɛ wo aŋa mli",
+    "confirmPasswordPlaceholder": "Si wo kpashimo hewalɛ"
+  },
+  "navigation": {
+    "dashboard": "Nkyerɛmu Pon",
+    "patients": "Ayarefo",
+    "appointments": "Nhyiam",
+    "profile": "Wo Ho Nsɛm"
+  },
+  "languages": {
+    "english": "English",
+    "twi": "Twi",
+    "ga": "Ga",
+    "ewe": "Ewe",
+    "selectLanguage": "Yi Kasa",
+    "changeLanguage": "Sesa Kasa"
+  }
+}
