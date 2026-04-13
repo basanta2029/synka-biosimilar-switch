@@ -56,20 +56,17 @@ const DIAGNOSIS_DRUG_CLASS_MAP: Record<string, string[]> = {
   'NON_HODGKIN_LYMPHOMA': ['Anti-CD20'],
   'CLL': ['Anti-CD20'],
   'MULTIPLE_SCLEROSIS': ['Anti-CD20', 'Interferon Beta'],
-  'CHRONIC_KIDNEY_DISEASE_ANEMIA': ['Erythropoietin'],
   'CKD_ANEMIA': ['Erythropoietin'],
   'CHEMOTHERAPY_ANEMIA': ['Erythropoietin'],
   'NEUTROPENIA': ['G-CSF'],
   'CHEMOTHERAPY_NEUTROPENIA': ['G-CSF'],
   'DIABETIC_MACULAR_EDEMA': ['Anti-VEGF'],
   'AGE_RELATED_MACULAR_DEGENERATION': ['Anti-VEGF'],
-  'OSTEOPOROSIS': ['Bone Modifier'],
-  'DIABETES_TYPE_2': ['GLP-1 Agonist', 'Insulin'],
 };
 
 // Allergy codes mapped to their related drug names/ingredients
 const ALLERGY_DRUG_RELATIONSHIPS: Record<string, string[]> = {
-  'ADALIMUMAB': ['humira', 'amjevita', 'hadlima', 'hyrimoz', 'cyltezo', 'adalimumab'],
+  'ADALIMUMAB': ['humira', 'amjevita', 'hadlima', 'hyrimoz', 'cyltezo', 'yuflyma', 'adalimumab'],
   'INFLIXIMAB': ['remicade', 'inflectra', 'renflexis', 'avsola', 'infliximab'],
   'ETANERCEPT': ['enbrel', 'erelzi', 'eticovo', 'etanercept'],
   'RITUXIMAB': ['rituxan', 'truxima', 'ruxience', 'riabni', 'rituximab'],
@@ -91,16 +88,19 @@ const ALLERGY_DRUG_RELATIONSHIPS: Record<string, string[]> = {
 
 // Deterministic Ghana prototype mapping: diagnosis -> allowed active ingredients
 const GHANA_DIAGNOSIS_ALLOWED_INGREDIENTS: Record<string, string[]> = {
-  RHEUMATOID_ARTHRITIS: ['adalimumab', 'rituximab'],
-  CROHNS_DISEASE: ['adalimumab'],
-  ULCERATIVE_COLITIS: ['adalimumab'],
-  PSORIATIC_ARTHRITIS: ['adalimumab'],
-  ANKYLOSING_SPONDYLITIS: ['adalimumab'],
+  RHEUMATOID_ARTHRITIS: ['adalimumab', 'etanercept', 'infliximab', 'rituximab'],
+  CROHNS_DISEASE: ['adalimumab', 'infliximab'],
+  ULCERATIVE_COLITIS: ['adalimumab', 'infliximab'],
+  PSORIASIS: ['adalimumab', 'etanercept', 'infliximab'],
+  PSORIATIC_ARTHRITIS: ['adalimumab', 'etanercept', 'infliximab'],
+  ANKYLOSING_SPONDYLITIS: ['adalimumab', 'etanercept', 'infliximab'],
   HER2_BREAST_CANCER: ['trastuzumab'],
   HER2_GASTRIC_CANCER: ['trastuzumab'],
   NON_HODGKIN_LYMPHOMA: ['rituximab'],
   CLL: ['rituximab'],
-  CHRONIC_KIDNEY_DISEASE_ANEMIA: ['epoetin'],
+  MULTIPLE_SCLEROSIS: ['rituximab'],
+  NEUTROPENIA: ['filgrastim'],
+  CHEMOTHERAPY_NEUTROPENIA: ['filgrastim'],
   CKD_ANEMIA: ['epoetin'],
   CHEMOTHERAPY_ANEMIA: ['epoetin'],
   DIABETIC_MACULAR_EDEMA: ['ranibizumab'],
@@ -154,13 +154,11 @@ export class SwitchService {
    * 6. Cost savings calculation
    */
   async checkEligibility(patientId: string, currentDrugId: string): Promise<EligibilityResult> {
-    // Get patient with diagnosis and allergy information
+    // Get patient with diagnosis, allergy, and recent switch information
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       include: {
-        switches: {
-          where: { status: 'PENDING' },
-        },
+        switches: true,
       },
     });
 
@@ -216,10 +214,36 @@ export class SwitchService {
     const { brandDrug, biosimilars } = alternatives;
 
     // Check if patient has pending switches
-    if (patient.switches.length > 0) {
+    const pendingSwitches = patient.switches.filter((s: any) => s.status === 'PENDING');
+    if (pendingSwitches.length > 0) {
       eligible = false;
       reasons.push('PENDING_SWITCH: Patient has a pending switch that must be completed or cancelled first');
     }
+
+    // Check for recently completed switches (90-day monitoring cooldown)
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    const recentCompleted = patient.switches.filter(
+      (s: any) => s.status === 'COMPLETED' && new Date(s.switchDate) > ninetyDaysAgo
+    );
+    if (recentCompleted.length > 0) {
+      const lastSwitch = recentCompleted.sort(
+        (a: any, b: any) => new Date(b.switchDate).getTime() - new Date(a.switchDate).getTime()
+      )[0];
+      const daysSince = Math.floor(
+        (today.getTime() - new Date(lastSwitch.switchDate).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      warnings.push(
+        `RECENT_SWITCH: A biosimilar switch was completed ${daysSince} day(s) ago. ` +
+        `A 90-day post-switch monitoring period is recommended before initiating another switch.`
+      );
+    }
+
+    // Clinical stability reminder — no treatment history data available, so always warn
+    warnings.push(
+      'STABILITY_CHECK: Reminder — verify the patient has been clinically stable on the current biologic ' +
+      'for at least 3 months before switching (Ghana FDA biosimilar guidance).'
+    );
 
     // Check if there are available biosimilars
     if (biosimilars.length === 0) {
@@ -228,7 +252,7 @@ export class SwitchService {
     }
 
     // Check diagnosis-drug compatibility
-    if (patient.diagnosis) {
+    if (patient.diagnosis && patient.diagnosis !== 'OTHER') {
       const compatibleClasses = DIAGNOSIS_DRUG_CLASS_MAP[patient.diagnosis] || [];
       const drugClass = brandDrug.therapeuticClass;
 
@@ -246,20 +270,26 @@ export class SwitchService {
             )} is commonly treated with ${drugClass} medications`
           );
         } else {
-          warnings.push(
+          eligible = false;
+          reasons.push(
             `DIAGNOSIS_MISMATCH: Patient's diagnosis (${this.formatDiagnosis(
               patient.diagnosis
-            )}) may not typically require ${drugClass} therapy. Please verify indication.`
+            )}) does not match ${drugClass} therapy. This drug class is not indicated for the recorded diagnosis.`
           );
         }
       }
+    } else if (patient.diagnosis === 'OTHER') {
+      warnings.push(
+        'UNSPECIFIED_DIAGNOSIS: Diagnosis is "Other". Eligibility cannot be fully verified — prescriber must confirm indication.'
+      );
     } else {
       warnings.push(
         'NO_DIAGNOSIS_ON_FILE: No diagnosis on file. Consider updating patient record for more accurate eligibility assessment.'
       );
     }
 
-    // Check for allergies that might affect eligibility
+    // Check for allergies — brand-level match is a warning (patient is already on it),
+    // biosimilar-level filtering below is the real safety gate.
     let patientAllergyCodes: string[] = [];
     if (patient.allergies) {
       patientAllergyCodes = patient.allergies.split(',').map((a: string) => a.trim().toUpperCase());
@@ -273,25 +303,34 @@ export class SwitchService {
         );
 
         if (allergyCheck.blocked) {
-          eligible = false;
-          reasons.push(
-            `ALLERGY_HISTORY: Patient has documented allergy (${allergyCheck.matchedAllergies.join(
+          warnings.push(
+            `ALLERGY_VS_CURRENT: Patient has documented allergy (${allergyCheck.matchedAllergies.join(
               ', '
-            )}) that may be contraindicated with ${brandDrug.name}`
+            )}) related to their current medication (${brandDrug.name}). ` +
+            `Since the patient is already on this drug, verify allergy record accuracy. ` +
+            `Biosimilar candidates with matching allergens will be excluded below.`
           );
-        } else {
-          // General warning about allergies for awareness
-          const allergyList = patientAllergyCodes.filter((a: string) => a !== 'NKDA').join(', ');
-          if (allergyList) {
-            warnings.push(`Patient has documented allergies: ${allergyList}. Please verify no contraindications with biosimilar formulation.`);
-          }
+        }
+
+        const allergyList = patientAllergyCodes.filter((a: string) => a !== 'NKDA').join(', ');
+        if (allergyList && !allergyCheck.blocked) {
+          warnings.push(
+            `DOCUMENTED_ALLERGIES: ${allergyList}. Biosimilar candidates will be screened against these.`
+          );
+        }
+
+        if (patientAllergyCodes.includes('OTHER')) {
+          warnings.push(
+            'UNSPECIFIED_ALLERGY: Patient has an unspecified allergy marked as "Other". ' +
+            'Prescriber must verify manually that no contraindications exist with the target biosimilar.'
+          );
         }
       }
     }
 
     // Deterministic Ghana diagnosis gating for recommendation list
     let filteredBiosimilars = biosimilars;
-    if (patient.diagnosis) {
+    if (patient.diagnosis && patient.diagnosis !== 'OTHER') {
       const allowedIngredients = GHANA_DIAGNOSIS_ALLOWED_INGREDIENTS[patient.diagnosis];
       if (allowedIngredients && allowedIngredients.length > 0) {
         filteredBiosimilars = filteredBiosimilars.filter((biosimilar: any) => {
@@ -304,6 +343,16 @@ export class SwitchService {
           )}.`
         );
       }
+    } else {
+      // No diagnosis or OTHER: restrict to same-molecule biosimilars only
+      const brandIngredient = this.normalizeIngredient(brandDrug.activeIngredient || '');
+      filteredBiosimilars = filteredBiosimilars.filter((biosimilar: any) => {
+        const ingredient = this.normalizeIngredient(biosimilar.activeIngredient || '');
+        return ingredient === brandIngredient;
+      });
+      warnings.push(
+        'SAME_MOLECULE_ONLY: No specific diagnosis on file — restricted to same-molecule biosimilars for safety.'
+      );
     }
 
     // Remove biosimilars blocked by patient allergy history

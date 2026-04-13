@@ -78,7 +78,7 @@ const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({ variant = 'compact'
             currentLanguage === 'en' && styles.fullButtonTextActive,
           ]}
         >
-          🇺🇸 English
+          🇬🇭 English
         </Text>
       </TouchableOpacity>
 

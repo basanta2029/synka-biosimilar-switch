@@ -47,7 +47,7 @@ export const patientSchema = Yup.object().shape({
     }),
   language: Yup.string()
     .required('Language is required')
-    .oneOf(['EN', 'ES'], 'Invalid language'),
+    .oneOf(['EN', 'TW'], 'Invalid language'),
   diagnosis: Yup.string().optional(),
   allergies: Yup.array()
     .of(Yup.string())

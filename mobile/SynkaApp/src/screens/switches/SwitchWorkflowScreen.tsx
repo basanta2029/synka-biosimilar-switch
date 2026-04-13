@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import NetInfo from '@react-native-community/netinfo';
@@ -28,7 +29,6 @@ type Props = NativeStackScreenProps<any, 'SwitchWorkflow'>;
 
 type Step =
   | 'SELECT_DRUG'
-  | 'ELIGIBILITY'
   | 'SELECT_BIOSIMILAR'
   | 'SCHEDULE'
   | 'CONSENT'
@@ -39,9 +39,13 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const [currentStep, setCurrentStep] = useState<Step>('SELECT_DRUG');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState(false);
+  const [showEligibilityModal, setShowEligibilityModal] = useState(false);
   const [brandDrugs, setBrandDrugs] = useState<Drug[]>([]);
   const [selectedBrandDrug, setSelectedBrandDrug] = useState<Drug | null>(null);
   const [eligibilityResult, setEligibilityResult] = useState<EligibilityResult | null>(null);
+  /** Per-drug eligibility from completed checks only (same API response as the detail panel). */
+  const [eligibilityByDrugId, setEligibilityByDrugId] = useState<Record<string, boolean>>({});
   const [selectedBiosimilar, setSelectedBiosimilar] = useState<BiosimilarWithSavings | null>(null);
   const [consentText, setConsentText] = useState('');
   const [createdSwitch, setCreatedSwitch] = useState<any>(null);
@@ -87,26 +91,38 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
 
   const handleSelectBrandDrug = async (drug: Drug) => {
     setSelectedBrandDrug(drug);
-    setIsLoading(true);
+    setEligibilityResult(null);
+    setIsCheckingEligibility(true);
+    setShowEligibilityModal(true);
     try {
       const netState = await NetInfo.fetch();
       if (netState.isConnected) {
+        await syncService.forcePatientSync(patientId);
         await syncService.syncAll();
       }
       const result = await switchesApi.checkEligibility(patientId, drug.id);
       setEligibilityResult(result);
-      setCurrentStep('ELIGIBILITY');
+      setEligibilityByDrugId((prev) => ({ ...prev, [drug.id]: result.eligible }));
     } catch (error: any) {
       console.error('Failed to check eligibility', error);
-      const apiMessage = error?.response?.data?.message;
-      Alert.alert(
-        'Error',
-        apiMessage ||
-          error.message ||
-          'Failed to check eligibility. If this patient was created offline, connect and sync, then try again.'
-      );
+      setShowEligibilityModal(false);
+      const netCheck = await NetInfo.fetch();
+      if (!netCheck.isConnected) {
+        Alert.alert(
+          'No Connection',
+          'Eligibility check requires an internet connection. Please connect and try again.'
+        );
+      } else {
+        const apiMessage = error?.response?.data?.message;
+        Alert.alert(
+          'Error',
+          apiMessage ||
+            error.message ||
+            'Failed to check eligibility. If this patient was created offline, sync first then try again.'
+        );
+      }
     } finally {
-      setIsLoading(false);
+      setIsCheckingEligibility(false);
     }
   };
 
@@ -115,8 +131,8 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     // Pre-populate consent text
     setConsentText(
       `I consent to switching from ${selectedBrandDrug?.name} to ${biosimilar.name}. ` +
-      `I understand that ${biosimilar.name} is an approved biosimilar medicine ` +
-      `and that my clinic has decided this switch will provide the same therapeutic benefit at a lower cost.`
+      `I understand that ${biosimilar.name} is a biosimilar medicine evaluated under Ghana FDA guidelines ` +
+      `and that my prescriber has determined this switch will provide the same therapeutic benefit.`
     );
     setCurrentStep('SCHEDULE');
   };
@@ -146,7 +162,6 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
         fromDrugId: selectedBrandDrug.id,
         toDrugId: selectedBiosimilar.id,
         eligibilityNotes: [
-          ...(eligibilityResult?.reasons || []),
           `CLINICAL_PROFILE=${CLINICAL_PROFILE.id}`,
           'SPECIALIST_INITIATION_CONFIRMED=true',
           'NHIS_REIMBURSEMENT_CHECKED=true',
@@ -228,6 +243,53 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     return `${label}: ${rest.join(':').trim()}`;
   };
 
+  /**
+   * Side badge uses the same `eligible` flag as the expanded panel: live result while selected,
+   * otherwise the last successful check cached for that drug id.
+   */
+  const getEligibilityForDrugRow = (drug: Drug): boolean | undefined => {
+    if (selectedBrandDrug?.id === drug.id && eligibilityResult) {
+      return eligibilityResult.eligible;
+    }
+    if (Object.prototype.hasOwnProperty.call(eligibilityByDrugId, drug.id)) {
+      return eligibilityByDrugId[drug.id];
+    }
+    return undefined;
+  };
+
+  const renderMedicationEligibilityBadge = (drug: Drug) => {
+    const eligible = getEligibilityForDrugRow(drug);
+    if (eligible === undefined) {
+      return null;
+    }
+
+    return (
+      <View
+        style={[
+          styles.drugStatusBadge,
+          eligible ? styles.drugStatusBadgeYes : styles.drugStatusBadgeNo,
+        ]}
+        accessibilityRole="text"
+        accessibilityLabel={eligible ? 'Eligible for switch' : 'Not eligible for switch'}
+      >
+        <Icon
+          name={eligible ? 'check-circle' : 'x-circle'}
+          size={12}
+          color={eligible ? COLORS.success : COLORS.error}
+        />
+        <Text
+          style={[
+            styles.drugStatusBadgeText,
+            eligible ? styles.drugStatusBadgeTextYes : styles.drugStatusBadgeTextNo,
+          ]}
+          numberOfLines={1}
+        >
+          {eligible ? 'Eligible' : 'Not eligible'}
+        </Text>
+      </View>
+    );
+  };
+
   const renderStepIndicator = () => {
     const steps = [
       { label: 'Drug', icon: 'package' },
@@ -239,13 +301,13 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     ];
     const stepMap: Record<Step, number> = {
       'SELECT_DRUG': 0,
-      'ELIGIBILITY': 1,
       'SELECT_BIOSIMILAR': 2,
       'SCHEDULE': 3,
       'CONSENT': 4,
       'CONFIRMATION': 5,
     };
-    const currentIndex = stepMap[currentStep];
+    const currentIndex =
+      currentStep === 'SELECT_DRUG' && eligibilityResult ? 1 : stepMap[currentStep];
 
     return (
       <View style={styles.stepIndicator}>
@@ -275,120 +337,171 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     );
   };
 
+  const renderEligibilityModal = () => (
+    <Modal
+      visible={showEligibilityModal}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setShowEligibilityModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalSheet}>
+          {/* Header bar */}
+          <View style={styles.modalHandle} />
+
+          {isCheckingEligibility ? (
+            <View style={styles.modalLoading}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.modalLoadingText}>Checking eligibility…</Text>
+            </View>
+          ) : eligibilityResult ? (
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              {/* Status banner */}
+              <View style={[
+                styles.eligibilityBadge,
+                eligibilityResult.eligible ? styles.eligibleBadge : styles.ineligibleBadge,
+              ]}>
+                <Icon
+                  name={eligibilityResult.eligible ? 'check-circle' : 'x-circle'}
+                  size={22}
+                  color={eligibilityResult.eligible ? COLORS.success : COLORS.error}
+                />
+                <Text style={[
+                  styles.eligibilityText,
+                  { color: eligibilityResult.eligible ? COLORS.success : COLORS.error }
+                ]}>
+                  {eligibilityResult.eligible ? 'Patient Eligible' : 'Not Eligible'}
+                </Text>
+              </View>
+
+              {/* Selected drug */}
+              <View style={styles.currentDrugCard}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="package" size={16} color={COLORS.textSecondary} />
+                  <Text style={styles.sectionTitle}>Selected medication</Text>
+                </View>
+                <Text style={styles.drugName}>{eligibilityResult.currentDrug.name}</Text>
+                <Text style={styles.drugDetail}>
+                  {formatCurrency(eligibilityResult.currentDrug.costPerMonth)}/month
+                </Text>
+              </View>
+
+              {/* Warnings */}
+              {eligibilityResult.warnings.length > 0 && (
+                <View style={styles.warningBox}>
+                  <View style={styles.boxHeader}>
+                    <Icon name="alert-triangle" size={16} color={COLORS.warning} />
+                    <Text style={styles.warningTitle}>Warnings</Text>
+                  </View>
+                  {eligibilityResult.warnings.map((warning, index) => (
+                    <View key={index} style={styles.bulletItem}>
+                      <View style={styles.bulletDot} />
+                      <Text style={styles.warningText}>{formatMessage(warning)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Blocking Reasons */}
+              {eligibilityResult.reasons.length > 0 && (
+                <View style={styles.infoBox}>
+                  <View style={styles.boxHeader}>
+                    <Icon name="x-circle" size={16} color={COLORS.error} />
+                    <Text style={styles.infoTitle}>Blocking Reasons</Text>
+                  </View>
+                  {eligibilityResult.reasons.map((reason, index) => (
+                    <View key={index} style={styles.bulletItem}>
+                      <View style={[styles.bulletDot, { backgroundColor: COLORS.secondary }]} />
+                      <Text style={styles.infoText}>{formatMessage(reason)}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Action buttons */}
+              {eligibilityResult.eligible && (
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={() => {
+                    setShowEligibilityModal(false);
+                    setCurrentStep('SELECT_BIOSIMILAR');
+                  }}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    View {eligibilityResult.recommendedBiosimilars.length} Biosimilar Options
+                  </Text>
+                  <Icon name="arrow-right" size={18} color={COLORS.surface} />
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowEligibilityModal(false)}
+              >
+                <Text style={styles.modalCloseButtonText}>Close</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          ) : null}
+        </View>
+      </View>
+    </Modal>
+  );
+
   const renderSelectDrugStep = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Select Current Medication</Text>
-      <Text style={styles.stepDescription}>
-        {CLINICAL_PROFILE.label}: choose the current brand biologic for this Ghana-focused workflow
-      </Text>
+      {!eligibilityResult && (
+        <Text style={styles.stepDescription}>
+          Tap a medication to check eligibility.
+        </Text>
+      )}
       <View style={styles.profileBanner}>
         <Icon name="map-pin" size={14} color={COLORS.primary} />
         <Text style={styles.profileBannerText}>
-          Active profile: {CLINICAL_PROFILE.label} ({CLINICAL_PROFILE.region})
+          {CLINICAL_PROFILE.label} ({CLINICAL_PROFILE.region}) · Ghana workflow · NHIS 2025
         </Text>
       </View>
 
-      {brandDrugs.map((drug) => (
-        <TouchableOpacity
-          key={drug.id}
-          style={styles.drugCard}
-          onPress={() => handleSelectBrandDrug(drug)}
-        >
-          <View style={styles.drugIconContainer}>
-            <Icon name="package" size={20} color={COLORS.primary} />
-          </View>
-          <View style={styles.drugInfo}>
-            <Text style={styles.drugName}>{drug.name}</Text>
-            <Text style={styles.drugClass}>{drug.therapeuticClass}</Text>
-            <Text style={styles.drugIngredient}>{drug.activeIngredient}</Text>
-          </View>
-          <View style={styles.drugCost}>
-            <Text style={styles.costLabel}>Current Cost</Text>
-            <Text style={styles.costValue}>{formatCurrency(drug.costPerMonth)}/mo</Text>
-          </View>
-          <Icon name="chevron-right" size={20} color={COLORS.textTertiary} />
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
-  const renderEligibilityStep = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Eligibility Check</Text>
-
-      {eligibilityResult && (
-        <>
-          <View style={[
-            styles.eligibilityBadge,
-            eligibilityResult.eligible ? styles.eligibleBadge : styles.ineligibleBadge,
-          ]}>
-            <Icon
-              name={eligibilityResult.eligible ? 'check-circle' : 'x-circle'}
-              size={24}
-              color={eligibilityResult.eligible ? COLORS.success : COLORS.error}
-            />
-            <Text style={[
-              styles.eligibilityText,
-              { color: eligibilityResult.eligible ? COLORS.success : COLORS.error }
-            ]}>
-              {eligibilityResult.eligible ? 'Patient Eligible' : 'Not Eligible'}
-            </Text>
-          </View>
-
-          <View style={styles.currentDrugCard}>
-            <View style={styles.sectionHeader}>
-              <Icon name="package" size={16} color={COLORS.textSecondary} />
-              <Text style={styles.sectionTitle}>Current Medication</Text>
-            </View>
-            <Text style={styles.drugName}>{eligibilityResult.currentDrug.name}</Text>
-            <Text style={styles.drugDetail}>
-              {formatCurrency(eligibilityResult.currentDrug.costPerMonth)}/month
-            </Text>
-          </View>
-
-          {eligibilityResult.warnings.length > 0 && (
-            <View style={styles.warningBox}>
-              <View style={styles.boxHeader}>
-                <Icon name="alert-triangle" size={16} color={COLORS.warning} />
-                <Text style={styles.warningTitle}>Warnings</Text>
+      {brandDrugs.map((drug) => {
+        const isSelected = selectedBrandDrug?.id === drug.id;
+        const isBusy = isCheckingEligibility && isSelected;
+        return (
+          <TouchableOpacity
+            key={drug.id}
+            style={[styles.drugCard, isSelected && styles.drugCardSelected]}
+            onPress={() => handleSelectBrandDrug(drug)}
+            disabled={isCheckingEligibility}
+            activeOpacity={0.7}
+          >
+            {/* Top row: icon, name + class, cost + chevron */}
+            <View style={styles.drugCardRow}>
+              <View style={styles.drugIconContainer}>
+                <Icon name="package" size={18} color={COLORS.primary} />
               </View>
-              {eligibilityResult.warnings.map((warning, index) => (
-                <View key={index} style={styles.bulletItem}>
-                  <View style={styles.bulletDot} />
-                  <Text style={styles.warningText}>{formatMessage(warning)}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {eligibilityResult.reasons.length > 0 && (
-            <View style={styles.infoBox}>
-              <View style={styles.boxHeader}>
-                <Icon name="info" size={16} color={COLORS.secondary} />
-                <Text style={styles.infoTitle}>Information</Text>
+              <View style={styles.drugInfo}>
+                <Text style={styles.drugName} numberOfLines={1}>{drug.name}</Text>
+                <Text style={styles.drugClass} numberOfLines={1}>{drug.therapeuticClass}</Text>
               </View>
-              {eligibilityResult.reasons.map((reason, index) => (
-                <View key={index} style={styles.bulletItem}>
-                  <View style={[styles.bulletDot, { backgroundColor: COLORS.secondary }]} />
-                  <Text style={styles.infoText}>{formatMessage(reason)}</Text>
-                </View>
-              ))}
+              <View style={styles.drugCost}>
+                <Text style={styles.costValue}>{formatCurrency(drug.costPerMonth)}/mo</Text>
+              </View>
+              <Icon name="chevron-right" size={18} color={COLORS.textTertiary} style={{ marginLeft: 4 }} />
             </View>
-          )}
 
-          {eligibilityResult.eligible && (
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => setCurrentStep('SELECT_BIOSIMILAR')}
-            >
-              <Text style={styles.primaryButtonText}>
-                View {eligibilityResult.recommendedBiosimilars.length} Biosimilar Options
-              </Text>
-              <Icon name="arrow-right" size={18} color={COLORS.surface} />
-            </TouchableOpacity>
-          )}
-        </>
-      )}
+            {/* Bottom row: ingredient + eligibility badge */}
+            <View style={styles.drugCardBottomRow}>
+              <Text style={styles.drugIngredient} numberOfLines={1}>{drug.activeIngredient}</Text>
+              {isBusy ? (
+                <ActivityIndicator size="small" color={COLORS.primary} />
+              ) : (
+                renderMedicationEligibilityBadge(drug)
+              )}
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+
+      {renderEligibilityModal()}
     </View>
   );
 
@@ -682,7 +795,11 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
                 </View>
                 <View style={styles.appointmentInfo}>
                   <Text style={styles.appointmentType}>
-                    {apt.appointmentType === 'DAY_3' ? 'Day 3 Follow-up' : 'Day 14 Follow-up'}
+                    {apt.appointmentType === 'INITIAL'
+                      ? 'Initial Visit'
+                      : apt.appointmentType === 'DAY_3'
+                        ? 'Day 3 Follow-up'
+                        : 'Day 14 Follow-up'}
                   </Text>
                   <Text style={styles.appointmentDate}>
                     {new Date(apt.scheduledAt).toLocaleDateString()}
@@ -708,8 +825,6 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     switch (currentStep) {
       case 'SELECT_DRUG':
         return renderSelectDrugStep();
-      case 'ELIGIBILITY':
-        return renderEligibilityStep();
       case 'SELECT_BIOSIMILAR':
         return renderSelectBiosimilarStep();
       case 'SCHEDULE':
@@ -721,7 +836,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
-  if (isLoading && currentStep === 'SELECT_DRUG') {
+  if (isLoading && brandDrugs.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -735,13 +850,18 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
       {renderStepIndicator()}
       {renderCurrentStep()}
 
-      {currentStep !== 'SELECT_DRUG' && currentStep !== 'CONFIRMATION' && (
+      {((currentStep !== 'SELECT_DRUG' && currentStep !== 'CONFIRMATION') ||
+        (currentStep === 'SELECT_DRUG' && eligibilityResult)) && (
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => {
+            if (currentStep === 'SELECT_DRUG' && eligibilityResult) {
+              setEligibilityResult(null);
+              setSelectedBrandDrug(null);
+              return;
+            }
             const steps: Step[] = [
               'SELECT_DRUG',
-              'ELIGIBILITY',
               'SELECT_BIOSIMILAR',
               'SCHEDULE',
               'CONSENT',
@@ -849,8 +969,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   drugCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.md,
@@ -858,17 +976,103 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.borderLight,
   },
+  drugCardSelected: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+    backgroundColor: COLORS.primary + '06',
+  },
+  drugCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  drugCardBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
+    paddingLeft: 46,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xxl,
+    maxHeight: '85%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.borderLight,
+    alignSelf: 'center',
+    marginBottom: SPACING.md,
+  },
+  modalLoading: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xxl,
+    gap: SPACING.md,
+  },
+  modalLoadingText: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    color: COLORS.textSecondary,
+  },
+  modalCloseButton: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    backgroundColor: COLORS.surface,
+  },
+  modalCloseButtonText: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: '600',
+    color: COLORS.textSecondary,
+  },
   drugIconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.md,
+    marginRight: SPACING.sm,
   },
   drugInfo: {
     flex: 1,
+    minWidth: 0,
+  },
+  drugStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    gap: 4,
+  },
+  drugStatusBadgeYes: {
+    backgroundColor: COLORS.success + '18',
+  },
+  drugStatusBadgeNo: {
+    backgroundColor: COLORS.error + '18',
+  },
+  drugStatusBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  drugStatusBadgeTextYes: {
+    color: COLORS.success,
+  },
+  drugStatusBadgeTextNo: {
+    color: COLORS.error,
   },
   drugName: {
     fontSize: TYPOGRAPHY.fontSize.md,
@@ -892,14 +1096,10 @@ const styles = StyleSheet.create({
   },
   drugCost: {
     alignItems: 'flex-end',
-    marginRight: SPACING.sm,
-  },
-  costLabel: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textSecondary,
+    marginRight: 2,
   },
   costValue: {
-    fontSize: TYPOGRAPHY.fontSize.md,
+    fontSize: TYPOGRAPHY.fontSize.sm,
     fontWeight: '700',
     color: COLORS.error,
   },
@@ -907,9 +1107,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: SPACING.lg,
+    padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     gap: SPACING.sm,
   },
   eligibleBadge: {
@@ -919,7 +1119,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.errorLight,
   },
   eligibilityText: {
-    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontSize: TYPOGRAPHY.fontSize.md,
     fontWeight: '700',
   },
   currentDrugCard: {

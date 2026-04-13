@@ -31,7 +31,7 @@ export interface Patient {
   name: string;
   phone: string;
   dateOfBirth: string;
-  language: 'EN' | 'ES';
+  language: 'EN' | 'TW';
   diagnosis?: string;      // Primary diagnosis code (e.g., "RHEUMATOID_ARTHRITIS")
   allergies?: string;      // Comma-separated allergy codes (e.g., "ADALIMUMAB,LATEX")
   createdAt: string;
@@ -43,7 +43,7 @@ export interface PatientFormData {
   name: string;
   phone: string;
   dateOfBirth: Date;
-  language: 'EN' | 'ES';
+  language: 'EN' | 'TW';
   diagnosis?: string;      // Primary diagnosis code
   allergies?: string[];    // Array of allergy codes
 }
@@ -166,7 +166,7 @@ export interface SmsLog {
   appointment?: Appointment;
   phoneNumber: string;
   message: string;
-  language: 'EN' | 'ES';
+  language: 'EN' | 'TW';
   sentAt?: string;
   deliveryStatus: 'PENDING' | 'SENT' | 'DELIVERED' | 'FAILED';
   twilioSid?: string;

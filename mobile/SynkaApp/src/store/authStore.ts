@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { isAxiosError } from 'axios';
 import { User, LoginRequest, RegisterRequest } from '../types';
 import { authApi } from '../api';
 import { storage } from '../utils/storage';
@@ -116,14 +117,52 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
             isLoading: false,
           });
         } catch (error) {
-          console.error('Auth token validation failed:', error);
-          // Token is invalid, clear storage
-          await storage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-          await storage.removeItem(STORAGE_KEYS.USER_DATA);
+          // Only treat explicit auth failures as "bad token". Network errors mean we cannot
+          // reach the server — keep offline session using cached user + token (offline-first).
+          const status = isAxiosError(error) ? error.response?.status : undefined;
+          const isNetworkFailure =
+            isAxiosError(error) &&
+            (error.code === 'ERR_NETWORK' ||
+              error.message === 'Network Error' ||
+              error.response == null);
+
+          if (isNetworkFailure || (status != null && status >= 500)) {
+            if (__DEV__) {
+              console.warn(
+                '[auth] getMe unreachable (network or server); using cached session from storage'
+              );
+            }
+            set({
+              user,
+              token,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            return;
+          }
+
+          if (status === 401 || status === 403) {
+            if (__DEV__) {
+              console.warn('[auth] Token rejected by server; clearing session');
+            }
+            await storage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+            await storage.removeItem(STORAGE_KEYS.USER_DATA);
+            set({
+              user: null,
+              token: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+            return;
+          }
+
+          if (__DEV__) {
+            console.warn('[auth] getMe failed with unexpected error; keeping cached session', error);
+          }
           set({
-            user: null,
-            token: null,
-            isAuthenticated: false,
+            user,
+            token,
+            isAuthenticated: true,
             isLoading: false,
           });
         }

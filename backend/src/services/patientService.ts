@@ -76,7 +76,7 @@ export class PatientService {
     name: string;
     phone: string;
     dateOfBirth: Date;
-    language: 'EN' | 'ES';
+    language: 'EN' | 'TW';
     diagnosis?: string;
     allergies?: string;
   }) {
@@ -111,7 +111,7 @@ export class PatientService {
       name?: string;
       phone?: string;
       dateOfBirth?: Date;
-      language?: 'EN' | 'ES';
+      language?: 'EN' | 'TW';
       allergies?: string;
     }
   ) {

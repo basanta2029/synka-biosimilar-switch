@@ -8,12 +8,16 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
-import { usePatients, useSyncStatus } from '../../hooks/usePatients';
+import { useQuery } from '@tanstack/react-query';
+import { usePatients, useSyncStatus, useDeletePatient } from '../../hooks/usePatients';
 import { Patient } from '../../types';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS, DIAGNOSES, ALLERGIES } from '../../constants';
 import { calculateAge } from '../../utils/date';
+import { switchesApi } from '../../api/switches';
+import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 type Props = NativeStackScreenProps<any, 'PatientList'>;
@@ -24,8 +28,28 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
 
   const { patients, isLoading, isOnline, refetch } = usePatients(debouncedSearch);
   const { queueCount, isSyncing } = useSyncStatus();
+  const deletePatient = useDeletePatient();
+  const { data: switchSummary, refetch: refetchSwitches } = useQuery({
+    queryKey: ['switches', 'eligibility-summary'],
+    queryFn: () => switchesApi.getSwitches(),
+    staleTime: 0, // Always refetch when screen focuses so new switches show immediately
+    retry: false,
+  });
 
-  // Note: Auto-sync is started globally in App.tsx, no need to start/stop here
+  // Track patients who have active/completed switches (not failed/cancelled)
+  const activeSwitchPatientIds = new Set(
+    (switchSummary?.switches || [])
+      .filter((record: any) => record.status === 'PENDING' || record.status === 'COMPLETED')
+      .map((record: any) => record.patientId)
+  );
+
+  // Refetch switch + patient data every time this screen gains focus (e.g. after creating a switch)
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchSwitches();
+      refetch();
+    }, [refetchSwitches, refetch])
+  );
 
   // Debounce search
   useEffect(() => {
@@ -42,6 +66,27 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
 
   const handleAddPatient = () => {
     navigation.navigate('PatientForm');
+  };
+
+  const handleDeletePatient = (patient: Patient) => {
+    Alert.alert(
+      'Delete Patient',
+      `Remove ${patient.name} from the patient list? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deletePatient.mutateAsync(patient.id);
+            } catch (error: any) {
+              Alert.alert('Error', error?.message || 'Failed to delete patient');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getDiagnosisLabel = (code: string | undefined) => {
@@ -64,6 +109,8 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
     const allergyLabels = getAllergyLabels(item.allergies);
     const hasNKDA = item.allergies?.includes('NKDA');
 
+    const hasActiveSwitch = activeSwitchPatientIds.has(item.id);
+
     return (
       <TouchableOpacity
         style={styles.patientCard}
@@ -82,14 +129,14 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.badges}>
                 <View style={[
                   styles.languageBadge,
-                  item.language === 'ES' ? styles.spanishBadge : styles.englishBadge
+                  item.language === 'TW' ? styles.twiBadge : styles.englishBadge
                 ]}>
-                  <Icon name="globe" size={10} color={item.language === 'ES' ? COLORS.warning : COLORS.secondary} />
+                  <Icon name="globe" size={10} color={item.language === 'TW' ? COLORS.warning : COLORS.secondary} />
                   <Text style={[
                     styles.languageText,
-                    { color: item.language === 'ES' ? COLORS.warning : COLORS.secondary }
+                    { color: item.language === 'TW' ? COLORS.warning : COLORS.secondary }
                   ]}>
-                    {item.language === 'ES' ? 'ES' : 'EN'}
+                    {item.language === 'TW' ? 'TWI' : 'EN'}
                   </Text>
                 </View>
                 {!item.synced && (
@@ -110,7 +157,16 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
           </View>
-          <Icon name="chevron-right" size={20} color={COLORS.textTertiary} />
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.deleteIconButton}
+              onPress={() => handleDeletePatient(item)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="trash-2" size={16} color={COLORS.error} />
+            </TouchableOpacity>
+            <Icon name="chevron-right" size={20} color={COLORS.textTertiary} />
+          </View>
         </View>
 
         {item.diagnosis && (
@@ -129,6 +185,27 @@ const PatientListScreen: React.FC<Props> = ({ navigation }) => {
             </Text>
           </View>
         )}
+
+        <View
+          style={[
+            styles.eligibilityRow,
+            hasActiveSwitch ? styles.eligibleRow : styles.neutralRow,
+          ]}
+        >
+          <Icon
+            name={hasActiveSwitch ? 'repeat' : 'minus-circle'}
+            size={12}
+            color={hasActiveSwitch ? COLORS.success : COLORS.textTertiary}
+          />
+          <Text
+            style={[
+              styles.eligibilityText,
+              { color: hasActiveSwitch ? COLORS.success : COLORS.textTertiary },
+            ]}
+          >
+            {hasActiveSwitch ? 'Active switch' : 'No switch initiated'}
+          </Text>
+        </View>
       </TouchableOpacity>
     );
   };
@@ -325,6 +402,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xs,
   },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  deleteIconButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.errorLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   languageBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -333,7 +423,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.sm,
     gap: 4,
   },
-  spanishBadge: {
+  twiBadge: {
     backgroundColor: COLORS.warningLight,
   },
   englishBadge: {
@@ -347,6 +437,35 @@ const styles = StyleSheet.create({
     padding: 4,
     backgroundColor: COLORS.warningLight,
     borderRadius: BORDER_RADIUS.sm,
+  },
+  eligibilityBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  eligibleBadge: {
+    backgroundColor: COLORS.successLight,
+  },
+  notEligibleBadge: {
+    backgroundColor: COLORS.errorLight,
+  },
+  eligibilityText: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    fontWeight: '600',
+  },
+  eligibilityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    gap: SPACING.xs,
+  },
+  eligibleRow: {
+    borderTopColor: COLORS.successLight,
+  },
+  neutralRow: {
+    borderTopColor: COLORS.borderLight,
   },
   patientDetails: {
     flexDirection: 'row',

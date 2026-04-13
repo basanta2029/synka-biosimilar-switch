@@ -17,7 +17,7 @@ enum Role {
 
 enum Language {
   EN
-  ES
+  TW
 }
 
 enum DrugType {
@@ -110,11 +110,11 @@ model Drug {
   description             String?
   createdAt               DateTime                  @default(now())
 
-  // Regulatory reference fields (e.g., US FDA, EMA, WHO)
-  activeIngredient        String?                   // Proper name (e.g., "adalimumab", "infliximab")
+  // Regulatory reference fields (WHO prequalification, Ghana FDA, reference NRAs)
+  activeIngredient        String?                   // Proper name / INN (e.g., "adalimumab", "infliximab")
   fdaSuffix               String?                   // Suffix assigned by a reference NRA (e.g., "-atto", "-adbm")
-  blaNumber               String?                   // Biologics License Application (or equivalent) number
-  fdaApprovalDate         DateTime?                 // Date of first approval by a reference NRA
+  blaNumber               String?                   // Regulatory reference number (WHO-PQ, NRA-REF, or Ghana FDA reg)
+  fdaApprovalDate         DateTime?                 // Date of first approval by a reference NRA or WHO prequalification
   interchangeability      InterchangeabilityStatus  @default(NOT_APPLICABLE)
   referenceProductId      String?                   // For biosimilars: links to the brand reference product
   referenceProduct        Drug?                     @relation("BiosimilarReference", fields: [referenceProductId], references: [id])

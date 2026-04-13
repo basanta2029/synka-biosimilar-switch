@@ -24,7 +24,7 @@ export interface CreatePatientDTO {
   name: string;
   phone: string;
   dateOfBirth: string;
-  language?: 'EN' | 'ES';
+  language?: 'EN' | 'TW';
   allergies?: string;
 }
 

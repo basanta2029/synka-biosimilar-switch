@@ -1,6 +1,13 @@
+import { Platform } from 'react-native';
+
+const DEFAULT_API_HOST =
+  Platform.OS === 'android'
+    ? 'http://10.0.2.2:3000' // Android emulator -> host machine loopback
+    : 'http://localhost:3000'; // iOS simulator -> host machine loopback
+
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:3000/api/v1', // Using USB port forwarding
+  BASE_URL: `${DEFAULT_API_HOST}/api/v1`,
   TIMEOUT: 10000, // 10 seconds (reduced for faster offline detection)
 };
 
@@ -105,10 +112,10 @@ export const BORDER_RADIUS = {
   full: 9999,
 };
 
-// Language Options
+// Language Options (Ghana prototype)
 export const LANGUAGES = [
-  { code: 'EN', label: 'English', flag: '🇺🇸' },
-  { code: 'ES', label: 'Español', flag: '🇲🇽' },
+  { code: 'EN', label: 'English', flag: '🇬🇭' },
+  { code: 'TW', label: 'Twi', flag: '🇬🇭' },
 ];
 
 // User Roles
@@ -158,9 +165,9 @@ export const REGEX = {
 // Date Formats
 export const DATE_FORMATS = {
   DISPLAY: 'MM/dd/yyyy',
-  DISPLAY_ES: 'dd/MM/yyyy',
+  DISPLAY_TW: 'dd/MM/yyyy',
   TIME: 'h:mm a',
-  TIME_ES: 'HH:mm',
+  TIME_TW: 'HH:mm',
   DATETIME: 'MM/dd/yyyy h:mm a',
   ISO: "yyyy-MM-dd'T'HH:mm:ss.SSSxxx",
 };
@@ -191,15 +198,22 @@ export const DIAGNOSES = [
   { code: 'RHEUMATOID_ARTHRITIS', label: 'Rheumatoid Arthritis (RA)', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
   { code: 'CROHNS_DISEASE', label: "Crohn's Disease", category: 'Gastrointestinal', drugClasses: ['TNF-Blocker'] },
   { code: 'ULCERATIVE_COLITIS', label: 'Ulcerative Colitis', category: 'Gastrointestinal', drugClasses: ['TNF-Blocker'] },
+  { code: 'PSORIASIS', label: 'Plaque Psoriasis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
   { code: 'PSORIATIC_ARTHRITIS', label: 'Psoriatic Arthritis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
   { code: 'ANKYLOSING_SPONDYLITIS', label: 'Ankylosing Spondylitis', category: 'Autoimmune', drugClasses: ['TNF-Blocker'] },
+  { code: 'MULTIPLE_SCLEROSIS', label: 'Multiple Sclerosis', category: 'Autoimmune', drugClasses: ['Anti-CD20'] },
 
   // Oncology/Hematology
   { code: 'HER2_BREAST_CANCER', label: 'HER2+ Breast Cancer', category: 'Oncology', drugClasses: ['HER2-Blocker'] },
   { code: 'HER2_GASTRIC_CANCER', label: 'HER2+ Gastric Cancer', category: 'Oncology', drugClasses: ['HER2-Blocker'] },
   { code: 'NON_HODGKIN_LYMPHOMA', label: 'Non-Hodgkin Lymphoma', category: 'Hematologic', drugClasses: ['Anti-CD20'] },
+  { code: 'CLL', label: 'Chronic Lymphocytic Leukemia (CLL)', category: 'Hematologic', drugClasses: ['Anti-CD20'] },
+  { code: 'NEUTROPENIA', label: 'Severe Chronic Neutropenia', category: 'Hematologic', drugClasses: ['G-CSF'] },
   { code: 'CHEMOTHERAPY_NEUTROPENIA', label: 'Chemotherapy-Induced Neutropenia', category: 'Oncology', drugClasses: ['G-CSF'] },
+
+  // Renal
   { code: 'CKD_ANEMIA', label: 'Anemia of Chronic Kidney Disease', category: 'Renal', drugClasses: ['Erythropoietin'] },
+  { code: 'CHEMOTHERAPY_ANEMIA', label: 'Chemotherapy-Related Anemia', category: 'Oncology', drugClasses: ['Erythropoietin'] },
 
   // Ophthalmology
   { code: 'DIABETIC_MACULAR_EDEMA', label: 'Diabetic Macular Edema', category: 'Ophthalmologic', drugClasses: ['Anti-VEGF'] },
@@ -213,16 +227,21 @@ export const DIAGNOSES = [
 export const ALLERGIES = [
   // Biologic ingredients
   { code: 'ADALIMUMAB', label: 'Adalimumab', category: 'Biologic Drug', relatedDrugs: ['Humira', 'Amjevita', 'Cyltezo', 'Hadlima', 'Hyrimoz', 'Yuflyma'] },
+  { code: 'INFLIXIMAB', label: 'Infliximab', category: 'Biologic Drug', relatedDrugs: ['Remicade', 'Inflectra', 'Renflexis', 'Avsola'] },
+  { code: 'ETANERCEPT', label: 'Etanercept', category: 'Biologic Drug', relatedDrugs: ['Enbrel', 'Erelzi'] },
   { code: 'RITUXIMAB', label: 'Rituximab', category: 'Biologic Drug', relatedDrugs: ['MabThera', 'Truxima'] },
   { code: 'TRASTUZUMAB', label: 'Trastuzumab', category: 'Biologic Drug', relatedDrugs: ['Herceptin', 'Ogivri'] },
   { code: 'RANIBIZUMAB', label: 'Ranibizumab', category: 'Biologic Drug', relatedDrugs: ['Lucentis', 'BioUcenta'] },
   { code: 'EPOETIN', label: 'Epoetin alfa', category: 'Biologic Drug', relatedDrugs: ['Eprex', 'Binocrit'] },
   { code: 'FILGRASTIM', label: 'Filgrastim', category: 'Biologic Drug', relatedDrugs: ['Neupogen', 'Zarxio', 'Nivestym'] },
+  { code: 'BEVACIZUMAB', label: 'Bevacizumab', category: 'Biologic Drug', relatedDrugs: ['Avastin', 'Mvasi', 'Zirabev'] },
+  { code: 'PEGFILGRASTIM', label: 'Pegfilgrastim', category: 'Biologic Drug', relatedDrugs: ['Neulasta', 'Fulphila', 'Udenyca'] },
 
   // Excipients/materials/proteins
   { code: 'LATEX', label: 'Latex', category: 'Material', relatedDrugs: [] },
   { code: 'POLYSORBATE', label: 'Polysorbate 80', category: 'Excipient', relatedDrugs: [] },
   { code: 'MURINE_PROTEINS', label: 'Murine (Mouse) Proteins', category: 'Protein', relatedDrugs: ['Rituximab', 'Infliximab'] },
+  { code: 'HAMSTER_PROTEIN', label: 'CHO (Hamster) Proteins', category: 'Protein', relatedDrugs: ['Adalimumab', 'Etanercept'] },
   { code: 'ECOLI_PROTEINS', label: 'E. coli Proteins', category: 'Protein', relatedDrugs: ['Neupogen', 'Zarxio', 'Nivestym'] },
   { code: 'NKDA', label: 'No Known Drug Allergies', category: 'None', relatedDrugs: [] },
   { code: 'OTHER', label: 'Other (specify in notes)', category: 'Other', relatedDrugs: [] },

@@ -381,7 +381,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Icon name="chevron-down" size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
                   <Text style={styles.helperText}>
-                    Ghana prototype diagnosis set for switch-eligibility support
+                    Used for switch eligibility checks (see Active profile on Biosimilar Switch).
                   </Text>
                 </View>
 
@@ -402,7 +402,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                     <Icon name="chevron-down" size={18} color={COLORS.textSecondary} />
                   </TouchableOpacity>
                   <Text style={styles.helperText}>
-                    Ghana prototype allergy set for biologic and biosimilar safety checks
+                    Used for biosimilar safety checks (see Active profile on Biosimilar Switch).
                   </Text>
                 </View>
 

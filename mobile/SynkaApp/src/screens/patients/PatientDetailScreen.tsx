@@ -213,7 +213,7 @@ const PatientDetailScreen: React.FC<Props> = ({ navigation, route }) => {
             <View style={styles.languageValue}>
               <Icon name="globe" size={14} color={COLORS.textSecondary} />
               <Text style={styles.value}>
-                {patient.language === 'ES' ? 'Spanish' : 'English'}
+                {patient.language === 'TW' ? 'Twi' : 'English'}
               </Text>
             </View>
           </View>

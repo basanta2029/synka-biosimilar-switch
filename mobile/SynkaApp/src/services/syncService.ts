@@ -164,6 +164,17 @@ class SyncService {
             await syncQueueDb.remove(item.id!);
             successCount++;
           } catch (error: any) {
+            const status = error?.response?.status;
+            // 400/404/409 are permanent failures — retrying won't help
+            if (status === 400 || status === 404 || status === 409) {
+              console.warn(
+                `Permanently removing queue item ${item.id} (${item.entityType}/${item.action}): ` +
+                `server returned ${status} — ${error?.response?.data?.message || error.message}`
+              );
+              await syncQueueDb.remove(item.id!);
+              failedCount++;
+              continue;
+            }
             console.error(`Failed to sync item ${item.id}:`, error.message);
             await syncQueueDb.updateRetry(item.id!, error.message);
             if (item.retryCount >= SYNC_CONFIG.MAX_RETRIES) {
@@ -329,6 +340,51 @@ class SyncService {
     if (state.isConnected) {
       this.syncAll().catch(console.error);
     }
+  }
+
+  /**
+   * Force-sync a specific patient to the server, bypassing the queue.
+   * Reads the latest data from the local DB and pushes it directly.
+   * Used before eligibility checks to guarantee the server has fresh data.
+   */
+  async forcePatientSync(patientId: string): Promise<boolean> {
+    const patient = await patientsDb.getById(patientId);
+    if (!patient) {
+      console.warn(`forcePatientSync: patient ${patientId} not found locally`);
+      return false;
+    }
+
+    const payload = {
+      name: patient.name,
+      phone: patient.phone,
+      dateOfBirth: patient.dateOfBirth,
+      language: patient.language,
+      diagnosis: patient.diagnosis,
+      allergies: patient.allergies,
+    };
+
+    try {
+      await patientsApi.updatePatient(patientId, payload);
+      await patientsDb.markAsSynced(patientId);
+      await syncQueueDb.removeByEntityId('patient', patientId);
+      console.log(`forcePatientSync: patient ${patientId} updated on server`);
+      return true;
+    } catch (updateErr: any) {
+      if (updateErr?.response?.status === 404) {
+        try {
+          await patientsApi.createPatient({ id: patientId, ...payload });
+          await patientsDb.markAsSynced(patientId);
+          await syncQueueDb.removeByEntityId('patient', patientId);
+          console.log(`forcePatientSync: patient ${patientId} created on server`);
+          return true;
+        } catch (createErr: any) {
+          console.error(`forcePatientSync: create also failed for ${patientId}`, createErr.message);
+        }
+      } else {
+        console.error(`forcePatientSync: update failed for ${patientId}`, updateErr.message);
+      }
+    }
+    return false;
   }
 
   /**

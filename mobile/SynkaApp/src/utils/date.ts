@@ -4,10 +4,10 @@ import { DATE_FORMATS } from '../constants';
 /**
  * Format date for display
  */
-export const formatDate = (date: string | Date, locale: 'EN' | 'ES' = 'EN'): string => {
+export const formatDate = (date: string | Date, locale: 'EN' | 'TW' = 'EN'): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
-    const formatStr = locale === 'ES' ? DATE_FORMATS.DISPLAY_ES : DATE_FORMATS.DISPLAY;
+    const formatStr = locale === 'TW' ? DATE_FORMATS.DISPLAY_TW : DATE_FORMATS.DISPLAY;
     return format(dateObj, formatStr);
   } catch (error) {
     console.error('Error formatting date:', error);
@@ -18,10 +18,10 @@ export const formatDate = (date: string | Date, locale: 'EN' | 'ES' = 'EN'): str
 /**
  * Format time for display
  */
-export const formatTime = (date: string | Date, locale: 'EN' | 'ES' = 'EN'): string => {
+export const formatTime = (date: string | Date, locale: 'EN' | 'TW' = 'EN'): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
-    const formatStr = locale === 'ES' ? DATE_FORMATS.TIME_ES : DATE_FORMATS.TIME;
+    const formatStr = locale === 'TW' ? DATE_FORMATS.TIME_TW : DATE_FORMATS.TIME;
     return format(dateObj, formatStr);
   } catch (error) {
     console.error('Error formatting time:', error);
@@ -32,7 +32,7 @@ export const formatTime = (date: string | Date, locale: 'EN' | 'ES' = 'EN'): str
 /**
  * Format datetime for display
  */
-export const formatDateTime = (date: string | Date, locale: 'EN' | 'ES' = 'EN'): string => {
+export const formatDateTime = (date: string | Date, locale: 'EN' | 'TW' = 'EN'): string => {
   try {
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
     return `${formatDate(dateObj, locale)} ${formatTime(dateObj, locale)}`;
