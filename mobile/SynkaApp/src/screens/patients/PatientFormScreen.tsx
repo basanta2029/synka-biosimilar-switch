@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/Feather';
 import { useCreatePatient, usePatient, useUpdatePatient } from '../../hooks/usePatients';
 import { Button, Input } from '../../components/common';
-import { patientSchema } from '../../utils/validation';
+import { patientSchema, normalizeUSPhone } from '../../utils/validation';
 import {
   COLORS,
   SPACING,
@@ -46,11 +46,13 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
   const [showAllergyModal, setShowAllergyModal] = useState(false);
 
   const handleSubmit = async (values: PatientFormData) => {
+    // Normalize phone to E.164 US format (+1XXXXXXXXXX) before saving
+    const normalized = { ...values, phone: normalizeUSPhone(values.phone) };
     try {
       if (isEditing) {
         await updatePatient.mutateAsync({
           id: patientId,
-          data: values,
+          data: normalized,
         });
         Alert.alert(t('common.success'), t('patients.patientUpdated'), [
           {
@@ -59,7 +61,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
           },
         ]);
       } else {
-        await createPatient.mutateAsync(values);
+        await createPatient.mutateAsync(normalized);
         Alert.alert(t('common.success'), t('patients.patientCreated'), [
           {
             text: t('common.ok'),
@@ -313,7 +315,7 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
 
                 <Input
                   label={`${t('patients.phone')} *`}
-                  placeholder={t('patients.phonePlaceholder')}
+                  placeholder="+1 (202) 555-1234"
                   value={values.phone}
                   onChangeText={handleChange('phone')}
                   onBlur={handleBlur('phone')}
@@ -321,6 +323,9 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                   keyboardType="phone-pad"
                   editable={!createPatient.isPending && !updatePatient.isPending}
                 />
+                <Text style={styles.helperText}>
+                  US format: +1XXXXXXXXXX or (XXX) XXX-XXXX
+                </Text>
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.label}>{t('patients.dateOfBirth')} *</Text>

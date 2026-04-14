@@ -9,6 +9,8 @@ const DEFAULT_API_HOST =
 export const API_CONFIG = {
   BASE_URL: `${DEFAULT_API_HOST}/api/v1`,
   TIMEOUT: 10000, // 10 seconds (reduced for faster offline detection)
+  // Network-reachable host for QR codes (so patient's phone can reach the backend)
+  PUBLIC_HOST: 'http://10.0.0.99:3000',
 };
 
 // Storage Keys
@@ -158,7 +160,7 @@ export const SEVERITY = {
 // Regex Patterns
 export const REGEX = {
   EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-  PHONE: /^[+]?[(]?[0-9]{1,3}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,4}[-\s.]?[0-9]{1,9}$/,
+  PHONE: /^\+1\d{10}$/, // US E.164 format: +1 followed by 10 digits
   NAME: /^[a-zA-Z\s\-']+$/,
 };
 
