@@ -248,10 +248,14 @@ export const patientsDb = {
         return;
       }
 
-      // Check if patient exists
-      const [results] = await db.executeSql('SELECT id FROM patients WHERE id = ?', [patient.id]);
+      // Check if patient exists and whether it has unsynced local edits
+      const [results] = await db.executeSql('SELECT id, synced FROM patients WHERE id = ?', [patient.id]);
 
       if (results.rows.length > 0) {
+        if (results.rows.item(0).synced === 0) {
+          // Local record has unsynced edits — don't overwrite with stale server data
+          return;
+        }
         // Update existing patient
         await db.executeSql(
           `UPDATE patients
@@ -321,8 +325,25 @@ export const patientsDb = {
         return;
       }
 
+      // Also skip patients that have unsynced local edits
+      const [unsyncedResults] = await db.executeSql('SELECT id FROM patients WHERE synced = 0');
+      const unsyncedIds = new Set<string>();
+      for (let i = 0; i < unsyncedResults.rows.length; i++) {
+        unsyncedIds.add(unsyncedResults.rows.item(i).id);
+      }
+
+      const safeToUpsert = patientsToUpsert.filter((p) => !unsyncedIds.has(p.id));
+
+      if (safeToUpsert.length < patientsToUpsert.length) {
+        console.log(`Skipping ${patientsToUpsert.length - safeToUpsert.length} patients with unsynced local edits`);
+      }
+
+      if (safeToUpsert.length === 0) {
+        return;
+      }
+
       await db.transaction((tx) => {
-        patientsToUpsert.forEach((patient) => {
+        safeToUpsert.forEach((patient) => {
           tx.executeSql(
             `INSERT OR REPLACE INTO patients (id, name, phone, dateOfBirth, language, diagnosis, allergies, createdAt, updatedAt, synced)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
@@ -340,7 +361,7 @@ export const patientsDb = {
           );
         });
       });
-      console.log(`Batch upserted ${patientsToUpsert.length} patients from server`);
+      console.log(`Batch upserted ${safeToUpsert.length} patients from server`);
     } catch (error) {
       console.error('Error batch upserting patients from server:', error);
       throw error;

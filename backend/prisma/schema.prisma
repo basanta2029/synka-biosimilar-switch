@@ -146,9 +146,10 @@ model SwitchRecord {
   consentObtained   Boolean       @default(false)
   consentTimestamp  DateTime?
   consentText       String?
-  completionDate    DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  completionDate      DateTime?
+  patientAccessToken  String?       @unique @map("patient_access_token")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 
   appointments      Appointment[]
 

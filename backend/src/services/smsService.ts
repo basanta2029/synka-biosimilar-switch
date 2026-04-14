@@ -8,6 +8,19 @@ const twilio =
     ? twilioFactory(config.twilio.accountSid, config.twilio.authToken)
     : null;
 
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/[^\d]/g, '');
+  if (raw.startsWith('+')) return raw;
+  if (digits.length === 10) return `${config.defaultCountryCode}${digits}`;
+  return `+${digits}`;
+}
+
+function isTwilioReady(): boolean {
+  if (!twilio) return false;
+  if (config.twilio.useWhatsApp) return !!config.twilio.whatsAppNumber;
+  return !!config.twilio.phoneNumber;
+}
+
 interface ScheduleSmsInput {
   patientId: string;
   appointmentId?: string;
@@ -42,12 +55,13 @@ export class SmsService {
   }
 
   async sendSmsNow(input: SendSmsNowInput) {
-    // First create log entry
+    const normalizedTo = normalizePhone(input.to);
+
     const sms = await prisma.smsLog.create({
       data: {
         patientId: input.patientId,
         appointmentId: input.appointmentId,
-        phoneNumber: input.to,
+        phoneNumber: normalizedTo,
         message: input.body,
         language: input.language,
         templateId: input.templateId,
@@ -56,8 +70,7 @@ export class SmsService {
       },
     });
 
-    if (!twilio || !config.twilio.phoneNumber) {
-      // If Twilio is not configured, mark as failed but keep log
+    if (!isTwilioReady()) {
       await prisma.smsLog.update({
         where: { id: sms.id },
         data: {
@@ -70,14 +83,14 @@ export class SmsService {
     }
 
     try {
-      // Use WhatsApp sandbox while 10DLC campaign is pending approval
-      const useWhatsApp = process.env.TWILIO_USE_WHATSAPP === 'true';
-      const to = useWhatsApp ? `whatsapp:${input.to}` : input.to;
-      const from = useWhatsApp
-        ? `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886'}`
+      const to = config.twilio.useWhatsApp
+        ? `whatsapp:${normalizedTo}`
+        : normalizedTo;
+      const from = config.twilio.useWhatsApp
+        ? `whatsapp:${config.twilio.whatsAppNumber}`
         : config.twilio.phoneNumber!;
 
-      const result = await twilio.messages.create({
+      const result = await twilio!.messages.create({
         to,
         from,
         body: input.body,
@@ -110,7 +123,7 @@ export class SmsService {
    * Handle Twilio webhook callbacks to update delivery status.
    * Supports basic two-way SMS codes per PRD.
    */
-  async handleTwilioWebhook(payload: any) {
+  async handleTwilioWebhook(payload: any): Promise<string | undefined> {
     const messageSid: string | undefined = payload.MessageSid || payload.SmsSid;
     const messageStatus: string | undefined = payload.MessageStatus || payload.SmsStatus;
     const to: string | undefined = payload.To;
@@ -147,10 +160,11 @@ export class SmsService {
     // Handle simple two-way codes if this is an inbound message
     if (body && from) {
       const trimmed = (body as string).trim().toUpperCase();
+      const cleanFrom = from.replace(/^whatsapp:/, '');
 
       const sms = await prisma.smsLog.findFirst({
         where: {
-          phoneNumber: from,
+          phoneNumber: cleanFrom,
         },
         orderBy: { createdAt: 'desc' },
         include: {
@@ -159,19 +173,18 @@ export class SmsService {
       });
 
       if (!sms || !sms.appointmentId) {
-        return;
+        return 'Sorry, we could not find a matching appointment. Please contact the clinic directly.';
       }
 
       if (trimmed === '1') {
-        // Confirm appointment
         await prisma.appointment.update({
           where: { id: sms.appointmentId },
           data: {
             status: 'SCHEDULED',
           },
         });
+        return 'Your appointment has been confirmed. We look forward to seeing you!';
       } else if (trimmed === '2') {
-        // Request reschedule
         await prisma.appointment.update({
           where: { id: sms.appointmentId },
           data: {
@@ -179,8 +192,8 @@ export class SmsService {
             notes: 'Patient replied with 2 (reschedule requested)',
           },
         });
+        return 'Your reschedule request has been received. The clinic will contact you with a new date.';
       } else if (trimmed === 'HELP') {
-        // Create alert for help request
         if (sms.patientId) {
           await prisma.alert.create({
             data: {
@@ -191,7 +204,10 @@ export class SmsService {
             },
           });
         }
+        return 'Your help request has been received. A clinic staff member will reach out to you shortly.';
       }
+
+      return 'Reply 1 to confirm your appointment, 2 to reschedule, or HELP for assistance.';
     }
   }
 }

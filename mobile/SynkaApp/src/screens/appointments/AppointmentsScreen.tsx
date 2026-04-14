@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  DeviceEventEmitter,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { switchesApi } from '../../api/switches';
@@ -86,7 +87,8 @@ const AppointmentsScreen: React.FC = () => {
   const handleFollowUpSuccess = () => {
     setShowFollowUpModal(false);
     setSelectedAppointment(null);
-    loadAppointments(); // Reload to reflect the completed status
+    loadAppointments();
+    DeviceEventEmitter.emit('dashboard-refresh');
   };
 
   const getStatusColor = (status: string) => {
@@ -151,7 +153,14 @@ const AppointmentsScreen: React.FC = () => {
             <Text style={styles.appointmentType}>
               {item.appointmentType === 'DAY_3' ? 'Day 3 Follow-up' : 'Day 14 Follow-up'}
             </Text>
-            <Text style={styles.daysUntil}>{getDaysUntil(item.scheduledAt)}</Text>
+            <Text style={[
+              styles.daysUntil,
+              item.status === 'COMPLETED' && { color: COLORS.success },
+            ]}>
+              {item.status === 'COMPLETED' && item.completedAt
+                ? `Completed ${formatDate(item.completedAt)}`
+                : getDaysUntil(item.scheduledAt)}
+            </Text>
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '15' }]}>
@@ -183,8 +192,16 @@ const AppointmentsScreen: React.FC = () => {
       <View style={styles.appointmentFooter}>
         <View style={styles.dateTimeContainer}>
           <Icon name="calendar" size={14} color={COLORS.textSecondary} />
-          <Text style={styles.dateText}>{formatDate(item.scheduledAt)}</Text>
-          <Text style={styles.timeText}>{formatTime(item.scheduledAt)}</Text>
+          <Text style={styles.dateText}>
+            {item.status === 'COMPLETED' && item.completedAt
+              ? formatDate(item.completedAt)
+              : formatDate(item.scheduledAt)}
+          </Text>
+          <Text style={styles.timeText}>
+            {item.status === 'COMPLETED' && item.completedAt
+              ? formatTime(item.completedAt)
+              : formatTime(item.scheduledAt)}
+          </Text>
         </View>
         {item.status === 'SCHEDULED' && (
           <TouchableOpacity

@@ -19,7 +19,12 @@ export const config = {
     accountSid: process.env.TWILIO_ACCOUNT_SID,
     authToken: process.env.TWILIO_AUTH_TOKEN,
     phoneNumber: process.env.TWILIO_PHONE_NUMBER,
+    useWhatsApp: process.env.TWILIO_USE_WHATSAPP === 'true',
+    whatsAppNumber: process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886',
   },
+
+  // Phone number formatting
+  defaultCountryCode: process.env.DEFAULT_COUNTRY_CODE || '+1',
 
   // Clinic
   clinic: {

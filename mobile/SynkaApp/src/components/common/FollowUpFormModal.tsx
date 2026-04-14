@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import NetInfo from '@react-native-community/netinfo';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../constants';
 import { switchesApi, FollowUpRequest } from '../../api/switches';
@@ -193,18 +194,30 @@ const FollowUpFormModal: React.FC<FollowUpFormModalProps> = ({
     );
   };
 
+  const SATISFACTION_OPTIONS = [
+    { icon: 'emoticon-cry-outline', label: 'Very Bad', color: '#E53935' },
+    { icon: 'emoticon-sad-outline', label: 'Bad', color: '#FB8C00' },
+    { icon: 'emoticon-neutral-outline', label: 'Okay', color: '#FDD835' },
+    { icon: 'emoticon-happy-outline', label: 'Good', color: '#7CB342' },
+    { icon: 'emoticon-excited-outline', label: 'Great', color: '#2E7D32' },
+  ];
+
   const SatisfactionButton = ({ rating }: { rating: number }) => {
     const isSelected = patientSatisfaction === rating;
-    const emojis = ['😞', '😕', '😐', '🙂', '😊'];
+    const opt = SATISFACTION_OPTIONS[rating - 1];
 
     return (
       <TouchableOpacity
-        style={[styles.satisfactionButton, isSelected && styles.satisfactionButtonSelected]}
+        style={[styles.satisfactionButton, isSelected && { borderColor: opt.color, backgroundColor: opt.color + '15' }]}
         onPress={() => setPatientSatisfaction(rating)}
       >
-        <Text style={styles.satisfactionEmoji}>{emojis[rating - 1]}</Text>
-        <Text style={[styles.satisfactionRating, isSelected && styles.satisfactionRatingSelected]}>
-          {rating}
+        <MCIcon
+          name={isSelected ? opt.icon.replace('-outline', '') : opt.icon}
+          size={30}
+          color={isSelected ? opt.color : COLORS.textTertiary}
+        />
+        <Text style={[styles.satisfactionRating, isSelected && { color: opt.color, fontWeight: '600' }]}>
+          {opt.label}
         </Text>
       </TouchableOpacity>
     );
@@ -525,8 +538,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: SPACING.sm,
+    paddingHorizontal: 2,
     borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.borderLight,
     backgroundColor: COLORS.surface,
   },
@@ -535,16 +549,17 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '10',
   },
   satisfactionEmoji: {
-    fontSize: 24,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   satisfactionRating: {
-    fontSize: TYPOGRAPHY.fontSize.xs,
-    color: COLORS.textSecondary,
+    fontSize: 10,
+    color: COLORS.textTertiary,
     fontWeight: '500',
+    textAlign: 'center',
   },
   satisfactionRatingSelected: {
     color: COLORS.primary,
+    fontWeight: '600',
   },
   footer: {
     padding: SPACING.lg,

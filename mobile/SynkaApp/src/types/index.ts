@@ -120,6 +120,7 @@ export interface SwitchRecord {
   consentTimestamp?: string;
   consentText?: string;
   completionDate?: string;
+  patientAccessToken?: string;
   createdAt: string;
   updatedAt: string;
   appointments?: Appointment[];

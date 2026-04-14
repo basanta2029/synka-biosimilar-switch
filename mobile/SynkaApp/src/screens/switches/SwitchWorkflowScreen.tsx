@@ -9,8 +9,10 @@ import {
   Alert,
   TextInput,
   Modal,
+  DeviceEventEmitter,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
+import QRCode from 'react-native-qrcode-svg';
 import NetInfo from '@react-native-community/netinfo';
 import {
   COLORS,
@@ -19,8 +21,11 @@ import {
   BORDER_RADIUS,
   CLINICAL_PROFILE,
   GHANA_TARGET_INGREDIENTS,
+  API_CONFIG,
 } from '../../constants';
 import { switchesApi } from '../../api/switches';
+import { patientsApi } from '../../api/patients';
+import { patientsDb } from '../../database';
 import { Drug, BiosimilarWithSavings, EligibilityResult } from '../../types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { syncService } from '../../services/syncService';
@@ -97,7 +102,41 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     try {
       const netState = await NetInfo.fetch();
       if (netState.isConnected) {
-        await syncService.forcePatientSync(patientId);
+        // Push latest local patient data directly to the server before eligibility check
+        const localPatient = await patientsDb.getById(patientId);
+        if (localPatient) {
+          try {
+            await patientsApi.updatePatient(patientId, {
+              name: localPatient.name,
+              phone: localPatient.phone,
+              dateOfBirth: localPatient.dateOfBirth,
+              language: localPatient.language,
+              diagnosis: localPatient.diagnosis || undefined,
+              allergies: localPatient.allergies || undefined,
+            });
+            await patientsDb.markAsSynced(patientId);
+          } catch (syncErr: any) {
+            // If 404, patient doesn't exist on server yet — create it
+            if (syncErr?.response?.status === 404) {
+              try {
+                await patientsApi.createPatient({
+                  id: patientId,
+                  name: localPatient.name,
+                  phone: localPatient.phone,
+                  dateOfBirth: localPatient.dateOfBirth,
+                  language: localPatient.language,
+                  diagnosis: localPatient.diagnosis || undefined,
+                  allergies: localPatient.allergies || undefined,
+                });
+                await patientsDb.markAsSynced(patientId);
+              } catch (createErr: any) {
+                console.warn('Pre-eligibility patient create failed:', createErr?.response?.data || createErr.message);
+              }
+            } else {
+              console.warn('Pre-eligibility patient sync failed:', syncErr?.response?.data || syncErr.message);
+            }
+          }
+        }
         await syncService.syncAll();
       }
       const result = await switchesApi.checkEligibility(patientId, drug.id);
@@ -191,6 +230,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
         );
         setCreatedSwitch(consentResult.switch);
         setCurrentStep('CONFIRMATION');
+        DeviceEventEmitter.emit('dashboard-refresh');
       } else {
         // Offline: queue for later sync
         await syncService.queueSwitchCreate(createRequest as any, consentRequest);
@@ -209,6 +249,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
           ],
         });
         setCurrentStep('CONFIRMATION');
+        DeviceEventEmitter.emit('dashboard-refresh');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create switch');
@@ -749,77 +790,106 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     </View>
   );
 
-  const renderConfirmationStep = () => (
-    <View style={styles.stepContent}>
-      <View style={styles.successIcon}>
-        <Icon name="check-circle" size={64} color={COLORS.success} />
-      </View>
+  const renderConfirmationStep = () => {
+    const token = createdSwitch?.patientAccessToken;
+    const patientPageUrl = token ? `${API_CONFIG.PUBLIC_HOST}/patient/switch/${token}` : null;
 
-      <Text style={styles.successTitle}>Switch Created Successfully!</Text>
-
-      <View style={styles.confirmationCard}>
-        <View style={styles.confirmationRow}>
-          <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>Switch Details</Text>
-            <View style={styles.switchDetailRow}>
-              <Text style={styles.confirmationValue}>{createdSwitch?.fromDrug?.name}</Text>
-              <Icon name="arrow-right" size={14} color={COLORS.primary} />
-              <Text style={[styles.confirmationValue, { color: COLORS.success }]}>
-                {createdSwitch?.toDrug?.name}
-              </Text>
-            </View>
-          </View>
+    return (
+      <View style={styles.stepContent}>
+        <View style={styles.successIcon}>
+          <Icon name="check-circle" size={64} color={COLORS.success} />
         </View>
 
-        <View style={styles.confirmationDivider} />
+        <Text style={styles.successTitle}>Switch Created Successfully!</Text>
 
-        <View style={styles.confirmationRow}>
-          <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>Status</Text>
-            <View style={styles.statusBadge}>
-              <Icon name="clock" size={12} color={COLORS.warning} />
-              <Text style={styles.statusText}>PENDING</Text>
+        {patientPageUrl ? (
+          <View style={styles.qrCard}>
+            <Text style={styles.qrTitle}>Share with Patient</Text>
+            <Text style={styles.qrSubtitle}>
+              Patient can scan this QR code to view their medication switch details and follow-up schedule
+            </Text>
+            <View style={styles.qrContainer}>
+              <QRCode
+                value={patientPageUrl}
+                size={180}
+                color={COLORS.text}
+                backgroundColor={COLORS.surface}
+              />
             </View>
           </View>
-        </View>
+        ) : (
+          <View style={styles.qrCard}>
+            <Icon name="wifi-off" size={20} color={COLORS.textSecondary} />
+            <Text style={styles.qrSubtitle}>
+              QR code will be available once this switch syncs to the server
+            </Text>
+          </View>
+        )}
 
-        <View style={styles.confirmationDivider} />
-
-        <View style={styles.confirmationRow}>
-          <View style={styles.confirmationItem}>
-            <Text style={styles.confirmationLabel}>Scheduled Follow-ups</Text>
-            {createdSwitch?.appointments?.map((apt: any) => (
-              <View key={apt.id} style={styles.appointmentItem}>
-                <View style={styles.appointmentIconContainer}>
-                  <Icon name="calendar" size={14} color={COLORS.primary} />
-                </View>
-                <View style={styles.appointmentInfo}>
-                  <Text style={styles.appointmentType}>
-                    {apt.appointmentType === 'INITIAL'
-                      ? 'Initial Visit'
-                      : apt.appointmentType === 'DAY_3'
-                        ? 'Day 3 Follow-up'
-                        : 'Day 14 Follow-up'}
-                  </Text>
-                  <Text style={styles.appointmentDate}>
-                    {new Date(apt.scheduledAt).toLocaleDateString()}
-                  </Text>
-                </View>
+        <View style={styles.confirmationCard}>
+          <View style={styles.confirmationRow}>
+            <View style={styles.confirmationItem}>
+              <Text style={styles.confirmationLabel}>Switch Details</Text>
+              <View style={styles.switchDetailRow}>
+                <Text style={styles.confirmationValue}>{createdSwitch?.fromDrug?.name}</Text>
+                <Icon name="arrow-right" size={14} color={COLORS.primary} />
+                <Text style={[styles.confirmationValue, { color: COLORS.success }]}>
+                  {createdSwitch?.toDrug?.name}
+                </Text>
               </View>
-            ))}
+            </View>
+          </View>
+
+          <View style={styles.confirmationDivider} />
+
+          <View style={styles.confirmationRow}>
+            <View style={styles.confirmationItem}>
+              <Text style={styles.confirmationLabel}>Status</Text>
+              <View style={styles.statusBadge}>
+                <Icon name="clock" size={12} color={COLORS.warning} />
+                <Text style={styles.statusText}>PENDING</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.confirmationDivider} />
+
+          <View style={styles.confirmationRow}>
+            <View style={styles.confirmationItem}>
+              <Text style={styles.confirmationLabel}>Scheduled Follow-ups</Text>
+              {createdSwitch?.appointments?.map((apt: any) => (
+                <View key={apt.id} style={styles.appointmentItem}>
+                  <View style={styles.appointmentIconContainer}>
+                    <Icon name="calendar" size={14} color={COLORS.primary} />
+                  </View>
+                  <View style={styles.appointmentInfo}>
+                    <Text style={styles.appointmentType}>
+                      {apt.appointmentType === 'INITIAL'
+                        ? 'Initial Visit'
+                        : apt.appointmentType === 'DAY_3'
+                          ? 'Day 3 Follow-up'
+                          : 'Day 14 Follow-up'}
+                    </Text>
+                    <Text style={styles.appointmentDate}>
+                      {new Date(apt.scheduledAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
           </View>
         </View>
-      </View>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => navigation.goBack()}
-      >
-        <Icon name="arrow-left" size={18} color={COLORS.surface} />
-        <Text style={styles.primaryButtonText}>Back to Patient</Text>
-      </TouchableOpacity>
-    </View>
-  );
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Icon name="arrow-left" size={18} color={COLORS.surface} />
+          <Text style={styles.primaryButtonText}>Back to Patient</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -1425,6 +1495,33 @@ const styles = StyleSheet.create({
     color: COLORS.success,
     textAlign: 'center',
     marginBottom: SPACING.lg,
+  },
+  qrCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+  },
+  qrTitle: {
+    fontSize: TYPOGRAPHY.fontSize.md,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+  },
+  qrSubtitle: {
+    fontSize: TYPOGRAPHY.fontSize.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+    lineHeight: 20,
+  },
+  qrContainer: {
+    padding: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
   },
   confirmationCard: {
     backgroundColor: COLORS.surface,

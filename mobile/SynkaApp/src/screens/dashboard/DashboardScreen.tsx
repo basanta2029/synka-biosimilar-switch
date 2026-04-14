@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  AppState,
+  DeviceEventEmitter,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useFocusEffect } from '@react-navigation/native';
@@ -47,12 +49,35 @@ const DashboardScreen: React.FC = () => {
     }
   }, []);
 
-  // Reload data every time the screen comes into focus
+  const isFocused = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Reload on focus + auto-poll every 10s while visible
   useFocusEffect(
     useCallback(() => {
+      isFocused.current = true;
       loadData();
+
+      intervalRef.current = setInterval(() => {
+        if (isFocused.current && AppState.currentState === 'active') {
+          loadData();
+        }
+      }, 10000);
+
+      return () => {
+        isFocused.current = false;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
     }, [loadData])
   );
+
+  // Instant refresh when other screens signal data changed
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('dashboard-refresh', () => {
+      loadData();
+    });
+    return () => sub.remove();
+  }, [loadData]);
 
   const onRefresh = () => {
     setRefreshing(true);

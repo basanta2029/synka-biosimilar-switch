@@ -88,9 +88,18 @@ export class SmsController {
    */
   async webhook(req: Request, res: Response, next: NextFunction) {
     try {
-      await smsService.handleTwilioWebhook(req.body);
-      // Twilio expects a 200 with empty body
-      res.status(200).end();
+      const replyText = await smsService.handleTwilioWebhook(req.body);
+
+      res.set('Content-Type', 'text/xml');
+      if (replyText) {
+        res.status(200).send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response><Message>${replyText}</Message></Response>`
+        );
+      } else {
+        res.status(200).send(
+          `<?xml version="1.0" encoding="UTF-8"?><Response></Response>`
+        );
+      }
     } catch (error) {
       next(error);
     }
