@@ -315,33 +315,28 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
 
                 <Input
                   label={`${t('patients.phone')} *`}
-                  placeholder="(202) 555-1234"
+                  placeholder="2025551234"
                   value={values.phone}
                   onChangeText={(text: string) => {
-                    // Strip everything except digits and leading +
-                    const digits = text.replace(/\D/g, '');
-                    // If already in +1 format, don't reprocess
-                    if (text.startsWith('+1') && digits.length === 11) return;
-                    // Only allow up to 10 digits
+                    // If user is editing a +1 number, strip it and let them edit digits
+                    const stripped = text.replace(/\D/g, '');
+                    // Remove leading 1 if they had +1 prefix
+                    const digits = stripped.length === 11 && stripped.startsWith('1')
+                      ? stripped.slice(1)
+                      : stripped;
                     const trimmed = digits.slice(0, 10);
-                    // Auto-format as user types, snap to +1XXXXXXXXXX at 10 digits
+                    // Auto-add +1 when 10 digits are entered
                     if (trimmed.length === 10) {
                       setFieldValue('phone', `+1${trimmed}`);
-                    } else if (trimmed.length >= 7) {
-                      setFieldValue('phone', `(${trimmed.slice(0, 3)}) ${trimmed.slice(3, 6)}-${trimmed.slice(6)}`);
-                    } else if (trimmed.length >= 4) {
-                      setFieldValue('phone', `(${trimmed.slice(0, 3)}) ${trimmed.slice(3)}`);
-                    } else if (trimmed.length > 0) {
-                      setFieldValue('phone', `(${trimmed}`);
                     } else {
-                      setFieldValue('phone', '');
+                      setFieldValue('phone', trimmed);
                     }
                   }}
                   onBlur={handleBlur('phone')}
                   error={touched.phone && errors.phone ? errors.phone : undefined}
                   keyboardType="phone-pad"
                   editable={!createPatient.isPending && !updatePatient.isPending}
-                  maxLength={14}
+                  maxLength={12}
                 />
 
                 <View style={styles.fieldContainer}>
