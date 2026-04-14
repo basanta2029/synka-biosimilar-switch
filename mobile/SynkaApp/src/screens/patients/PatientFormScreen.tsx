@@ -318,37 +318,31 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                   placeholder="(202) 555-1234"
                   value={values.phone}
                   onChangeText={(text: string) => {
-                    // Strip everything except digits
+                    // Strip everything except digits and leading +
                     const digits = text.replace(/\D/g, '');
+                    // If already in +1 format, don't reprocess
+                    if (text.startsWith('+1') && digits.length === 11) return;
                     // Only allow up to 10 digits
                     const trimmed = digits.slice(0, 10);
-                    // Auto-format as user types
-                    let formatted = trimmed;
-                    if (trimmed.length >= 7) {
-                      formatted = `(${trimmed.slice(0, 3)}) ${trimmed.slice(3, 6)}-${trimmed.slice(6)}`;
+                    // Auto-format as user types, snap to +1XXXXXXXXXX at 10 digits
+                    if (trimmed.length === 10) {
+                      setFieldValue('phone', `+1${trimmed}`);
+                    } else if (trimmed.length >= 7) {
+                      setFieldValue('phone', `(${trimmed.slice(0, 3)}) ${trimmed.slice(3, 6)}-${trimmed.slice(6)}`);
                     } else if (trimmed.length >= 4) {
-                      formatted = `(${trimmed.slice(0, 3)}) ${trimmed.slice(3)}`;
+                      setFieldValue('phone', `(${trimmed.slice(0, 3)}) ${trimmed.slice(3)}`);
                     } else if (trimmed.length > 0) {
-                      formatted = `(${trimmed}`;
-                    }
-                    setFieldValue('phone', formatted);
-                  }}
-                  onBlur={(e: any) => {
-                    handleBlur('phone')(e);
-                    // On blur, auto-prepend +1 if 10 digits entered
-                    const digits = values.phone.replace(/\D/g, '');
-                    if (digits.length === 10) {
-                      setFieldValue('phone', `+1${digits}`);
+                      setFieldValue('phone', `(${trimmed}`);
+                    } else {
+                      setFieldValue('phone', '');
                     }
                   }}
+                  onBlur={handleBlur('phone')}
                   error={touched.phone && errors.phone ? errors.phone : undefined}
                   keyboardType="phone-pad"
                   editable={!createPatient.isPending && !updatePatient.isPending}
-                  maxLength={14} // (XXX) XXX-XXXX = 14 chars
+                  maxLength={14}
                 />
-                <Text style={styles.helperText}>
-                  Enter 10-digit US number — +1 is added automatically
-                </Text>
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.label}>{t('patients.dateOfBirth')} *</Text>
