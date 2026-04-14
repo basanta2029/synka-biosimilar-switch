@@ -4,7 +4,10 @@ import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
-// All SMS routes require authentication; scheduling/sending restricted to clinical staff
+// Twilio webhook — must be BEFORE authenticate middleware (Twilio cannot send JWT)
+router.post('/webhook', (req, res, next) => smsController.webhook(req, res, next));
+
+// All remaining SMS routes require authentication
 router.use(authenticate);
 
 // Nurses (STAFF), doctors, and admins can schedule/send SMS
@@ -19,9 +22,6 @@ router.post(
   authorize('STAFF', 'DOCTOR', 'ADMIN'),
   (req, res, next) => smsController.sendNow(req as any, res, next)
 );
-
-// Twilio webhook does not use JWT auth (Twilio cannot send JWT)
-router.post('/webhook', (req, res, next) => smsController.webhook(req, res, next));
 
 export default router;
 

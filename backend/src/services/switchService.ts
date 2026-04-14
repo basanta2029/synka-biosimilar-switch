@@ -1,6 +1,13 @@
+import crypto from 'crypto';
 import { PrismaClient, SwitchStatus, AppointmentType, AppointmentStatus } from '@prisma/client';
 import { prisma } from '../utils/prisma';
 import { drugService } from './drugService';
+import { smsService } from './smsService';
+import {
+  switchInitiatedMessage,
+  appointmentReminderMessage,
+  switchCompletedMessage,
+} from './smsTemplates';
 
 export interface EligibilityResult {
   eligible: boolean;
@@ -448,6 +455,34 @@ export class SwitchService {
   }
 
   /**
+   * Re-evaluate PENDING switches for a patient after eligibility-affecting
+   * fields (DOB, diagnosis, allergies) are updated.  Any switch that is no
+   * longer eligible is automatically cancelled with an explanatory note.
+   */
+  async cancelStaleSwitch(
+    patientId: string,
+    changedFields: Record<string, any>
+  ): Promise<void> {
+    const pending = await prisma.switchRecord.findMany({
+      where: { patientId, status: 'PENDING' },
+    });
+
+    for (const sw of pending) {
+      try {
+        const result = await this.checkEligibility(patientId, sw.fromDrugId);
+        if (!result.eligible) {
+          await this.cancelSwitch(
+            sw.id,
+            `Auto-cancelled: patient update (${Object.keys(changedFields).join(', ')}) made this switch ineligible — ${result.reasons.join('; ')}`
+          );
+        }
+      } catch (err: any) {
+        console.error(`cancelStaleSwitch: could not re-evaluate switch ${sw.id}:`, err.message);
+      }
+    }
+  }
+
+  /**
    * Create a new switch record
    */
   async createSwitch(data: CreateSwitchRequest) {
@@ -475,7 +510,8 @@ export class SwitchService {
       throw new Error('Target drug must be a biosimilar');
     }
 
-    // Create switch record
+    // Create switch record with a unique patient-facing access token
+    const patientAccessToken = crypto.randomUUID();
     const switchRecord = await prisma.switchRecord.create({
       data: {
         patientId,
@@ -485,6 +521,7 @@ export class SwitchService {
         status: 'PENDING',
         eligibilityNotes,
         consentObtained: false,
+        patientAccessToken,
       },
       include: {
         patient: true,
@@ -516,24 +553,62 @@ export class SwitchService {
     }
 
     // Update switch with consent
-    const updatedSwitch = await prisma.switchRecord.update({
+    await prisma.switchRecord.update({
       where: { id: switchId },
       data: {
         consentObtained,
         consentTimestamp: consentObtained ? new Date() : null,
         consentText: consentObtained ? consentText : null,
       },
+    });
+
+    // If consent obtained, schedule follow-up appointments and send SMS
+    if (consentObtained) {
+      await this.scheduleFollowUpAppointments(switchId, switchRecord.patientId);
+
+      // Send switch-initiated SMS to patient
+      try {
+        const fromDrug = await prisma.drug.findUnique({ where: { id: switchRecord.fromDrugId } });
+        const toDrug = await prisma.drug.findUnique({ where: { id: switchRecord.toDrugId } });
+        const patient = switchRecord.patient;
+
+        if (fromDrug && toDrug && patient) {
+          const day3Date = new Date();
+          day3Date.setDate(day3Date.getDate() + 3);
+
+          const message = switchInitiatedMessage(
+            patient.language as 'EN' | 'TW',
+            {
+              patientName: patient.name.split(' ')[0], // first name for brevity
+              fromDrug: fromDrug.name,
+              toDrug: toDrug.name,
+              day3Date: day3Date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+            }
+          );
+
+          await smsService.sendSmsNow({
+            patientId: patient.id,
+            to: patient.phone,
+            body: message,
+            language: patient.language as 'EN' | 'TW',
+          });
+        }
+      } catch (smsErr: any) {
+        // SMS failure should not block the consent flow
+        console.error('[SMS] Failed to send switch-initiated SMS:', smsErr?.message);
+      }
+    }
+
+    // Re-fetch with all relations so the response includes appointments
+    const updatedSwitch = await prisma.switchRecord.findUniqueOrThrow({
+      where: { id: switchId },
       include: {
         patient: true,
         fromDrug: true,
         toDrug: true,
+        appointments: true,
       },
     });
-
-    // If consent obtained, schedule follow-up appointments
-    if (consentObtained) {
-      await this.scheduleFollowUpAppointments(switchId, switchRecord.patientId);
-    }
 
     return updatedSwitch;
   }
@@ -575,6 +650,52 @@ export class SwitchService {
       ],
     });
 
+    // Schedule reminder SMS 24 hours before each appointment
+    try {
+      const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+      if (patient) {
+        const lang = patient.language as 'EN' | 'TW';
+        const firstName = patient.name.split(' ')[0];
+
+        // Day-3 reminder (sent 24h before)
+        const day3Reminder = new Date(day3Date);
+        day3Reminder.setDate(day3Reminder.getDate() - 1);
+        day3Reminder.setHours(10, 0, 0, 0); // 10 AM day before
+
+        await smsService.scheduleSms({
+          patientId,
+          to: patient.phone,
+          body: appointmentReminderMessage(lang, {
+            patientName: firstName,
+            appointmentType: 'DAY_3',
+            date: day3Date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+          }),
+          language: lang,
+          scheduledFor: day3Reminder.toISOString(),
+        });
+
+        // Day-14 reminder (sent 24h before)
+        const day14Reminder = new Date(day14Date);
+        day14Reminder.setDate(day14Reminder.getDate() - 1);
+        day14Reminder.setHours(10, 0, 0, 0); // 10 AM day before
+
+        await smsService.scheduleSms({
+          patientId,
+          to: patient.phone,
+          body: appointmentReminderMessage(lang, {
+            patientName: firstName,
+            appointmentType: 'DAY_14',
+            date: day14Date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+          }),
+          language: lang,
+          scheduledFor: day14Reminder.toISOString(),
+        });
+      }
+    } catch (smsErr: any) {
+      // SMS scheduling failure should not block appointment creation
+      console.error('[SMS] Failed to schedule reminder SMS:', smsErr?.message);
+    }
+
     return appointments;
   }
 
@@ -614,7 +735,36 @@ export class SwitchService {
       },
     });
 
+    // Send switch-completed SMS to patient
+    this.sendSwitchCompletedSms(updatedSwitch).catch((err: any) =>
+      console.error('[SMS] Failed to send switch-completed SMS:', err?.message)
+    );
+
     return updatedSwitch;
+  }
+
+  /**
+   * Send completion SMS (fire-and-forget helper)
+   */
+  private async sendSwitchCompletedSms(switchRecord: any): Promise<void> {
+    const patient = switchRecord.patient;
+    const toDrug = switchRecord.toDrug;
+    if (!patient || !toDrug) return;
+
+    const message = switchCompletedMessage(
+      patient.language as 'EN' | 'TW',
+      {
+        patientName: patient.name.split(' ')[0],
+        toDrug: toDrug.name,
+      }
+    );
+
+    await smsService.sendSmsNow({
+      patientId: patient.id,
+      to: patient.phone,
+      body: message,
+      language: patient.language as 'EN' | 'TW',
+    });
   }
 
   /**
@@ -840,13 +990,19 @@ export class SwitchService {
           day14FollowUp?.stillTakingMedication !== false;
 
         if (noSevereReactions) {
-          await prisma.switchRecord.update({
+          const completedSwitch = await prisma.switchRecord.update({
             where: { id: appointment.switchId },
             data: {
               status: 'COMPLETED',
               completionDate: new Date(),
             },
+            include: { patient: true, toDrug: true },
           });
+
+          // Send switch-completed SMS
+          this.sendSwitchCompletedSms(completedSwitch).catch((err: any) =>
+            console.error('[SMS] Failed to send auto-complete SMS:', err?.message)
+          );
         }
       }
     }
@@ -898,7 +1054,8 @@ export class SwitchService {
       totalSwitches,
       pendingSwitches,
       completedSwitches,
-      failedSwitches,
+      failedCount,
+      cancelledCount,
       upcomingFollowUpPatients,
       unreviewedAlerts,
     ] = await Promise.all([
@@ -906,6 +1063,7 @@ export class SwitchService {
       prisma.switchRecord.count({ where: { status: 'PENDING' } }),
       prisma.switchRecord.count({ where: { status: 'COMPLETED' } }),
       prisma.switchRecord.count({ where: { status: 'FAILED' } }),
+      prisma.switchRecord.count({ where: { status: 'CANCELLED' } }),
       prisma.appointment.findMany({
         where: {
           status: 'SCHEDULED',
@@ -918,19 +1076,22 @@ export class SwitchService {
       prisma.alert.count({ where: { reviewed: false } }),
     ]);
 
-    // Calculate success rate
-    const totalProcessed = completedSwitches + failedSwitches;
-    const successRate = totalProcessed > 0
-      ? Math.round((completedSwitches / totalProcessed) * 100)
+    // "Failed / Discontinued" combines FAILED + CANCELLED
+    const failedSwitches = failedCount + cancelledCount;
+
+    // Success rate = completed out of all resolved (completed + failed + cancelled)
+    const totalResolved = completedSwitches + failedSwitches;
+    const successRate = totalResolved > 0
+      ? Math.round((completedSwitches / totalResolved) * 100)
       : 0;
 
-    // Calculate total savings from completed switches
-    const completedSwitchesData = await prisma.switchRecord.findMany({
-      where: { status: 'COMPLETED' },
+    // Calculate savings from all active switches (PENDING + COMPLETED)
+    const activeSwitchesData = await prisma.switchRecord.findMany({
+      where: { status: { in: ['COMPLETED', 'PENDING'] } },
       include: { fromDrug: true, toDrug: true },
     });
 
-    const totalMonthlySavings = completedSwitchesData.reduce((sum, s) => {
+    const totalMonthlySavings = activeSwitchesData.reduce((sum, s) => {
       return sum + (s.fromDrug.costPerMonth - s.toDrug.costPerMonth);
     }, 0);
 
@@ -940,7 +1101,6 @@ export class SwitchService {
       completedSwitches,
       failedSwitches,
       successRate,
-      // Count unique patients with upcoming follow-up visits
       upcomingAppointments: upcomingFollowUpPatients.length,
       unreviewedAlerts,
       totalMonthlySavings,

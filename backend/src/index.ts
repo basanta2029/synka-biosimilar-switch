@@ -3,6 +3,7 @@ import cors from 'cors';
 import { config } from './config';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/authRoutes';
+import { startSmsScheduler } from './services/smsScheduler';
 
 // Initialize Express app
 const app = express();
@@ -55,9 +56,17 @@ app.use('/api/v1/drugs', drugRoutes);
 import switchRoutes from './routes/switchRoutes';
 app.use('/api/v1/switches', switchRoutes);
 
+// Import SMS routes
+import smsRoutes from './routes/smsRoutes';
+app.use('/api/v1/sms', smsRoutes);
+
 // Import admin routes
 import adminRoutes from './routes/adminRoutes';
 app.use('/api/v1/admin', adminRoutes);
+
+// Public patient-facing page (no auth)
+import patientPageRoutes from './routes/patientPageRoutes';
+app.use('/patient', patientPageRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -73,10 +82,13 @@ app.use(errorHandler);
 // Start server
 const PORT = config.port;
 app.listen(PORT, () => {
-  console.log(`🚀 Synka API server running on port ${PORT}`);
-  console.log(`📊 Environment: ${config.nodeEnv}`);
-  console.log(`🏥 Clinic: ${config.clinic.name}`);
-  console.log(`📍 Health check: http://localhost:${PORT}/health`);
+  console.log(`Synka API server running on port ${PORT}`);
+  console.log(`Environment: ${config.nodeEnv}`);
+  console.log(`Clinic: ${config.clinic.name}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
+
+  // Start background SMS scheduler (processes queued reminder messages)
+  startSmsScheduler();
 });
 
 export default app;

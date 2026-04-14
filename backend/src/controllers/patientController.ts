@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { patientService } from '../services/patientService';
+import { switchService } from '../services/switchService';
 
 export class PatientController {
   /**
@@ -82,7 +83,7 @@ export class PatientController {
   async updatePatient(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const { name, phone, dateOfBirth, language, allergies } = req.body;
+      const { name, phone, dateOfBirth, language, allergies, diagnosis } = req.body;
 
       const data: any = {};
       if (name) data.name = name;
@@ -90,8 +91,18 @@ export class PatientController {
       if (dateOfBirth) data.dateOfBirth = new Date(dateOfBirth);
       if (language) data.language = language;
       if (allergies !== undefined) data.allergies = allergies;
+      if (diagnosis !== undefined) data.diagnosis = diagnosis;
 
       const patient = await patientService.updatePatient(id, data);
+
+      // Re-evaluate PENDING switches when eligibility-affecting fields change
+      const eligibilityFields = ['dateOfBirth', 'diagnosis', 'allergies'];
+      const eligibilityChanged = eligibilityFields.some((f) => data[f] !== undefined);
+      if (eligibilityChanged) {
+        switchService
+          .cancelStaleSwitch(patient.id, data)
+          .catch((err: any) => console.error('Switch re-evaluation failed:', err));
+      }
 
       res.json({ patient });
     } catch (error: any) {

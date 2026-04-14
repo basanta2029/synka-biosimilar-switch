@@ -89,9 +89,15 @@ export class PatientService {
       throw new Error('A patient with this phone number already exists');
     }
 
-    // Validate age >= 18
-    const age = new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear();
-    if (age < 18) {
+    // Validate age >= 18 (precise birthday-aware check)
+    const today = new Date();
+    const dob = new Date(data.dateOfBirth);
+    let createAge = today.getFullYear() - dob.getFullYear();
+    if (today.getMonth() < dob.getMonth() ||
+        (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) {
+      createAge--;
+    }
+    if (createAge < 18) {
       throw new Error('Patient must be at least 18 years old');
     }
 
@@ -113,6 +119,7 @@ export class PatientService {
       dateOfBirth?: Date;
       language?: 'EN' | 'TW';
       allergies?: string;
+      diagnosis?: string;
     }
   ) {
     // Check if patient exists
@@ -131,10 +138,16 @@ export class PatientService {
       }
     }
 
-    // If DOB is being updated, validate age
+    // If DOB is being updated, validate age (precise birthday-aware check)
     if (data.dateOfBirth) {
-      const age = new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear();
-      if (age < 18) {
+      const today = new Date();
+      const dob = new Date(data.dateOfBirth);
+      let updateAge = today.getFullYear() - dob.getFullYear();
+      if (today.getMonth() < dob.getMonth() ||
+          (today.getMonth() === dob.getMonth() && today.getDate() < dob.getDate())) {
+        updateAge--;
+      }
+      if (updateAge < 18) {
         throw new Error('Patient must be at least 18 years old');
       }
     }
