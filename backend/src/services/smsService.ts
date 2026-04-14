@@ -70,11 +70,18 @@ export class SmsService {
     }
 
     try {
+      // Use WhatsApp sandbox while 10DLC campaign is pending approval
+      const useWhatsApp = process.env.TWILIO_USE_WHATSAPP === 'true';
+      const to = useWhatsApp ? `whatsapp:${input.to}` : input.to;
+      const from = useWhatsApp
+        ? `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886'}`
+        : config.twilio.phoneNumber!;
+
       const result = await twilio.messages.create({
-        to: input.to,
-        from: config.twilio.phoneNumber!,
+        to,
+        from,
         body: input.body,
-        statusCallback: undefined, // Use global webhook URL configured in Twilio console
+        statusCallback: undefined,
       });
 
       const updated = await prisma.smsLog.update({
