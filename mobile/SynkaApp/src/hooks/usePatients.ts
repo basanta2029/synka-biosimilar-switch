@@ -155,7 +155,8 @@ export const useCreatePatient = () => {
       return patient;
     },
     onSuccess: () => {
-      // Invalidate queries to refetch
+      // Force immediate refetch so new patient appears on list
+      queryClient.refetchQueries({ queryKey: ['patients', 'local'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     },
   });
