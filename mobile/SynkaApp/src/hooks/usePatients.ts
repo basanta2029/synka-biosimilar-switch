@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
+import { DeviceEventEmitter } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { patientsApi } from '../api/patients';
 import { patientsDb } from '../database';
@@ -29,11 +30,11 @@ export const usePatients = (searchQuery?: string) => {
   } = useQuery({
     queryKey: ['patients', 'local', searchQuery],
     queryFn: () => patientsDb.getAll(searchQuery),
-    staleTime: Infinity,
+    staleTime: 0, // Always refetch on invalidation so new/edited patients appear immediately
   });
 
   // Fetch from API (only when online)
-  const { error: apiError } = useQuery({
+  const { error: apiError, refetch: refetchApi } = useQuery({
     queryKey: ['patients', 'api', searchQuery],
     queryFn: async () => {
       const response = await patientsApi.getPatients({ search: searchQuery });
@@ -52,12 +53,19 @@ export const usePatients = (searchQuery?: string) => {
     retry: false, // Don't retry API calls - rely on local data
   });
 
+  const refetchAll = async () => {
+    if (isOnline) {
+      await refetchApi();
+    }
+    await refetchLocal();
+  };
+
   return {
     patients: localPatients || [],
-    isLoading: isLoadingLocal, // Only show loading for local data, not API
+    isLoading: isLoadingLocal,
     isOnline,
     error: apiError,
-    refetch: refetchLocal,
+    refetch: refetchAll,
   };
 };
 
@@ -80,7 +88,7 @@ export const usePatient = (patientId: string) => {
   const { data: localPatient, isLoading: isLoadingLocal } = useQuery({
     queryKey: ['patient', patientId, 'local'],
     queryFn: () => patientsDb.getById(patientId),
-    staleTime: Infinity,
+    staleTime: 0,
   });
 
   // Fetch from API (only when online)
@@ -175,15 +183,31 @@ export const useUpdatePatient = () => {
       if (data.diagnosis !== undefined) updates.diagnosis = data.diagnosis;
       if (data.allergies !== undefined) updates.allergies = data.allergies?.join(',') || '';
 
-      // Update in local DB
+      // Update in local DB first
       await patientsDb.update(id, updates);
 
-      // Queue for sync
+      // Try to update on server directly (if online)
+      try {
+        const netState = await NetInfo.fetch();
+        if (netState.isConnected) {
+          await patientsApi.updatePatient(id, updates);
+          await patientsDb.markAsSynced(id);
+          // Clear any stale queue items for this patient
+          await syncService.clearPatientSyncQueue(id);
+          return;
+        }
+      } catch (error: any) {
+        console.warn('Direct patient update failed, falling back to queue:', error?.response?.data || error.message);
+      }
+
+      // Fallback: queue for sync (offline or server call failed)
       await syncService.queuePatientSync('update', id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patients'] });
       queryClient.invalidateQueries({ queryKey: ['patient'] });
+      queryClient.invalidateQueries({ queryKey: ['switches'] });
+      DeviceEventEmitter.emit('dashboard-refresh');
     },
   });
 };
