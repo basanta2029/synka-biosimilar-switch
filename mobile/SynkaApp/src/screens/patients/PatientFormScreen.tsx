@@ -315,16 +315,39 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
 
                 <Input
                   label={`${t('patients.phone')} *`}
-                  placeholder="+1 (202) 555-1234"
+                  placeholder="(202) 555-1234"
                   value={values.phone}
-                  onChangeText={handleChange('phone')}
-                  onBlur={handleBlur('phone')}
+                  onChangeText={(text: string) => {
+                    // Strip everything except digits
+                    const digits = text.replace(/\D/g, '');
+                    // Only allow up to 10 digits
+                    const trimmed = digits.slice(0, 10);
+                    // Auto-format as user types
+                    let formatted = trimmed;
+                    if (trimmed.length >= 7) {
+                      formatted = `(${trimmed.slice(0, 3)}) ${trimmed.slice(3, 6)}-${trimmed.slice(6)}`;
+                    } else if (trimmed.length >= 4) {
+                      formatted = `(${trimmed.slice(0, 3)}) ${trimmed.slice(3)}`;
+                    } else if (trimmed.length > 0) {
+                      formatted = `(${trimmed}`;
+                    }
+                    setFieldValue('phone', formatted);
+                  }}
+                  onBlur={(e: any) => {
+                    handleBlur('phone')(e);
+                    // On blur, auto-prepend +1 if 10 digits entered
+                    const digits = values.phone.replace(/\D/g, '');
+                    if (digits.length === 10) {
+                      setFieldValue('phone', `+1${digits}`);
+                    }
+                  }}
                   error={touched.phone && errors.phone ? errors.phone : undefined}
                   keyboardType="phone-pad"
                   editable={!createPatient.isPending && !updatePatient.isPending}
+                  maxLength={14} // (XXX) XXX-XXXX = 14 chars
                 />
                 <Text style={styles.helperText}>
-                  US format: +1XXXXXXXXXX or (XXX) XXX-XXXX
+                  Enter 10-digit US number — +1 is added automatically
                 </Text>
 
                 <View style={styles.fieldContainer}>
