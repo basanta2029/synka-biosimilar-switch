@@ -316,28 +316,22 @@ const PatientFormScreen: React.FC<Props> = ({ navigation, route }) => {
                 <Input
                   label={`${t('patients.phone')} *`}
                   placeholder="2025551234"
-                  value={values.phone}
+                  value={values.phone.startsWith('+1') ? values.phone.slice(2) : values.phone}
                   onChangeText={(text: string) => {
-                    // If user is editing a +1 number, strip it and let them edit digits
-                    const stripped = text.replace(/\D/g, '');
-                    // Remove leading 1 if they had +1 prefix
-                    const digits = stripped.length === 11 && stripped.startsWith('1')
-                      ? stripped.slice(1)
-                      : stripped;
-                    const trimmed = digits.slice(0, 10);
-                    // Auto-add +1 when 10 digits are entered
-                    if (trimmed.length === 10) {
-                      setFieldValue('phone', `+1${trimmed}`);
-                    } else {
-                      setFieldValue('phone', trimmed);
-                    }
+                    const digits = text.replace(/\D/g, '').slice(0, 10);
+                    setFieldValue('phone', digits.length === 10 ? `+1${digits}` : digits);
                   }}
                   onBlur={handleBlur('phone')}
                   error={touched.phone && errors.phone ? errors.phone : undefined}
                   keyboardType="phone-pad"
                   editable={!createPatient.isPending && !updatePatient.isPending}
-                  maxLength={12}
+                  maxLength={10}
                 />
+                {values.phone.startsWith('+1') && (
+                  <Text style={[styles.helperText, { color: COLORS.success }]}>
+                    {values.phone}
+                  </Text>
+                )}
 
                 <View style={styles.fieldContainer}>
                   <Text style={styles.label}>{t('patients.dateOfBirth')} *</Text>
