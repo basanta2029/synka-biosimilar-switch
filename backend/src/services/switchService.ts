@@ -32,6 +32,7 @@ export interface CreateSwitchRequest {
   fromDrugId: string;
   toDrugId: string;
   eligibilityNotes?: string;
+  patientAccessToken?: string;
 }
 
 export interface ConsentRequest {
@@ -486,7 +487,7 @@ export class SwitchService {
    * Create a new switch record
    */
   async createSwitch(data: CreateSwitchRequest) {
-    const { patientId, fromDrugId, toDrugId, eligibilityNotes } = data;
+    const { patientId, fromDrugId, toDrugId, eligibilityNotes, patientAccessToken: providedToken } = data;
 
     // Verify patient exists
     const patient = await prisma.patient.findUnique({
@@ -511,7 +512,7 @@ export class SwitchService {
     }
 
     // Create switch record with a unique patient-facing access token
-    const patientAccessToken = crypto.randomUUID();
+    const patientAccessToken = providedToken || crypto.randomUUID();
     const switchRecord = await prisma.switchRecord.create({
       data: {
         patientId,

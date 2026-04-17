@@ -43,7 +43,7 @@ export class SwitchController {
    */
   async createSwitch(req: Request, res: Response, next: NextFunction) {
     try {
-      const { patientId, fromDrugId, toDrugId, eligibilityNotes } = req.body;
+      const { patientId, fromDrugId, toDrugId, eligibilityNotes, patientAccessToken } = req.body;
 
       if (!patientId || !fromDrugId || !toDrugId) {
         return res.status(400).json({
@@ -57,6 +57,7 @@ export class SwitchController {
         fromDrugId,
         toDrugId,
         eligibilityNotes,
+        patientAccessToken,
       });
 
       res.status(201).json({ switch: switchRecord });

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import uuid from 'react-native-uuid';
 import {
   View,
   Text,
@@ -232,8 +233,11 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
         setCurrentStep('CONFIRMATION');
         DeviceEventEmitter.emit('dashboard-refresh');
       } else {
-        // Offline: queue for later sync
-        await syncService.queueSwitchCreate(createRequest as any, consentRequest);
+        // Offline: generate a local token so the QR code is immediately available.
+        // The same token is sent to the server when the switch syncs, so the URL stays stable.
+        const localToken = uuid.v4() as string;
+        const offlineCreateRequest = { ...(createRequest as any), patientAccessToken: localToken };
+        await syncService.queueSwitchCreate(offlineCreateRequest, consentRequest);
         Alert.alert(
           'Offline',
           'Switch created locally – will sync when online.'
@@ -242,6 +246,7 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
           fromDrug: selectedBrandDrug,
           toDrug: selectedBiosimilar,
           status: 'PENDING',
+          patientAccessToken: localToken,
           appointments: [
             { id: 'INITIAL', appointmentType: 'INITIAL', scheduledAt: initialDate.toISOString() },
             { id: 'DAY_3', appointmentType: 'DAY_3', scheduledAt: day3Date.toISOString() },

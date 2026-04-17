@@ -6,6 +6,7 @@ export interface CreateSwitchRequest {
   fromDrugId: string;
   toDrugId: string;
   eligibilityNotes?: string;
+  patientAccessToken?: string;
 }
 
 export interface ConsentRequest {
