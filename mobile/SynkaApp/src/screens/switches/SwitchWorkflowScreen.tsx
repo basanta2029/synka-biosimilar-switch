@@ -196,18 +196,20 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
     }
 
     setIsSubmitting(true);
+    // Pre-generate token so QR is available regardless of online/offline path.
+    const localToken = uuid.v4() as string;
     try {
       const createRequest = {
         patientId,
         fromDrugId: selectedBrandDrug.id,
         toDrugId: selectedBiosimilar.id,
+        patientAccessToken: localToken,
         eligibilityNotes: [
           `CLINICAL_PROFILE=${CLINICAL_PROFILE.id}`,
           'SPECIALIST_INITIATION_CONFIRMED=true',
           'NHIS_REIMBURSEMENT_CHECKED=true',
           'CLINICAL_STABILITY_REVIEWED=true',
         ].join('; '),
-        // Optional schedule metadata for backend to use when available
         schedule: {
           initial: initialDate.toISOString(),
           day3: day3Date.toISOString(),
@@ -223,25 +225,21 @@ const SwitchWorkflowScreen: React.FC<Props> = ({ navigation, route }) => {
       const netState = await NetInfo.fetch();
 
       if (netState.isConnected) {
-        // Online: create switch immediately
+        // Online: create switch immediately; backend preserves the pre-generated token.
         const switchResult = await switchesApi.createSwitch(createRequest as any);
         const consentResult = await switchesApi.recordConsent(
           switchResult.switch.id,
           consentRequest
         );
-        setCreatedSwitch(consentResult.switch);
+        // Use backend token if returned, otherwise fall back to local token.
+        const token = consentResult.switch.patientAccessToken || localToken;
+        setCreatedSwitch({ ...consentResult.switch, patientAccessToken: token });
         setCurrentStep('CONFIRMATION');
         DeviceEventEmitter.emit('dashboard-refresh');
       } else {
-        // Offline: generate a local token so the QR code is immediately available.
-        // The same token is sent to the server when the switch syncs, so the URL stays stable.
-        const localToken = uuid.v4() as string;
-        const offlineCreateRequest = { ...(createRequest as any), patientAccessToken: localToken };
-        await syncService.queueSwitchCreate(offlineCreateRequest, consentRequest);
-        Alert.alert(
-          'Offline',
-          'Switch created locally – will sync when online.'
-        );
+        // Offline: queue for sync; QR uses the pre-generated token.
+        await syncService.queueSwitchCreate(createRequest as any, consentRequest);
+        Alert.alert('Offline', 'Switch created locally – will sync when online.');
         setCreatedSwitch({
           fromDrug: selectedBrandDrug,
           toDrug: selectedBiosimilar,
